@@ -10,9 +10,15 @@
     {
       "src": "/(.*)",
       "dest": "/"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
     }
   ],
   "env": {
-    "FHIR_SERVER_URL": "@fhir_server_url"
+    "FHIR_SERVER_URL": "@fhir_server_url",
+    "PRIMARY_COLOR": "#E3F2FD",
+    "ACCENT_COLOR": "#10B981"
   }
 } 

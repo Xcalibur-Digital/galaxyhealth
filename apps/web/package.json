@@ -6,13 +6,17 @@
     "cra-template": "1.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "mantine": "^3.0.0",
+    "typeface-inter": "^1.1.13",
+    "typeface-open-sans": "^1.1.13"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "build:css": "postcss src/styles.css -o dist/styles.css"
   },
   "eslintConfig": {
     "extends": [
