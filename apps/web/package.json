@@ -3,13 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "cra-template": "1.2.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-scripts": "5.0.1",
-    "mantine": "^3.0.0",
+    "@mantine/core": "^6.0.0",
+    "@mantine/hooks": "^6.0.0",
+    "@react-three/drei": "^9.0.0",
+    "@react-three/fiber": "^8.0.0",
+    "axios": "^1.3.4",
+    "firebase": "^10.7.0",
+    "framer-motion": "^10.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.0.0",
+    "react-scripts": "^5.0.1",
+    "three": "^0.160.0",
     "typeface-inter": "^1.1.13",
-    "typeface-open-sans": "^1.1.13"
+    "typeface-open-sans": "^1.1.13",
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -17,6 +25,11 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "build:css": "postcss src/styles.css -o dist/styles.css"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^4.9.5"
   },
   "eslintConfig": {
     "extends": [
