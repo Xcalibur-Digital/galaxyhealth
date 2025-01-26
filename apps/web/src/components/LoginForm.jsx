@@ -27,10 +27,10 @@ const LoginForm = ({ onSuccess }) => {
     setLoading(true);
     setError('');
     try {
-      const user = await authService.loginWithGoogle();
+      const user = await authService.handleGoogleAuth();
       onSuccess(user);
     } catch (err) {
-      setError('Google login failed');
+      setError(err.response?.data?.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }

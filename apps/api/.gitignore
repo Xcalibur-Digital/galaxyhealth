@@ -1,0 +1,32 @@
+# Dependencies
+/node_modules
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Firebase service account
+src/config/serviceAccount.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+yarn-debug.log*
+yarn-error.log*
+
+src/config/serviceAccount.json 

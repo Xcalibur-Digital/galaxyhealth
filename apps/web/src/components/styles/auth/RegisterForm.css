@@ -1,0 +1,21 @@
+.register-form {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.password-requirements {
+  font-size: 0.85rem;
+  color: var(--mantine-color-dimmed);
+  margin-top: 0.5rem;
+} 

@@ -1,0 +1,51 @@
+.patient-search {
+  max-width: 600px;
+  margin: 2rem auto;
+}
+
+.search-container {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-input {
+  flex: 1;
+}
+
+.search-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  justify-content: center;
+}
+
+.results-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.patient-result {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.patient-result:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.mantine-Menu-item {
+  transition: all 0.2s ease;
+}
+
+.mantine-Menu-item:hover .mantine-Text-root {
+  color: var(--mantine-color-blue-4);
+}
+
+.history-timestamp {
+  font-size: 0.75rem;
+  color: var(--mantine-color-gray-6);
+} 

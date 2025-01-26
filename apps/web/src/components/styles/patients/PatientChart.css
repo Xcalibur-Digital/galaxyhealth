@@ -1,0 +1,14 @@
+.patient-chart {
+  background: var(--mantine-color-dark-6);
+  border-radius: var(--mantine-radius-md);
+  padding: 1.5rem;
+}
+
+.chart-header {
+  margin-bottom: 1.5rem;
+}
+
+.chart-content {
+  display: grid;
+  gap: 1.5rem;
+} 

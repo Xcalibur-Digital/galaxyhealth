@@ -1,0 +1,35 @@
+.patient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.search-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.patient-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.patient-card {
+  background: var(--mantine-color-dark-6);
+  border-radius: var(--mantine-radius-md);
+  padding: 1.5rem;
+  transition: transform 0.2s;
+}
+
+.patient-card:hover {
+  transform: translateY(-2px);
+} 

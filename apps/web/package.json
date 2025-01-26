@@ -1,35 +1,40 @@
 {
   "name": "web",
-  "version": "0.1.0",
   "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000 --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+  },
   "dependencies": {
-    "@mantine/core": "^6.0.0",
-    "@mantine/hooks": "^6.0.0",
+    "@emotion/react": "^11.14.0",
+    "@mantine/core": "^6.0.22",
+    "@mantine/hooks": "^6.0.22",
     "@react-three/drei": "^9.0.0",
     "@react-three/fiber": "^8.0.0",
+    "@tabler/icons-react": "^3.29.0",
     "axios": "^1.3.4",
-    "firebase": "^10.7.0",
+    "firebase": "^10.14.1",
     "framer-motion": "^10.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-firebase-hooks": "^5.1.1",
     "react-icons": "^4.0.0",
-    "react-scripts": "^5.0.1",
-    "three": "^0.160.0",
-    "typeface-inter": "^1.1.13",
-    "typeface-open-sans": "^1.1.13",
-    "web-vitals": "^2.1.4"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "build:css": "postcss src/styles.css -o dist/styles.css"
+    "react-router-dom": "^6.22.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "typescript": "^4.9.5"
+    "@vitejs/plugin-react": "^4.2.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "typescript": "^4.9.5",
+    "vite": "^5.0.0"
   },
   "eslintConfig": {
     "extends": [

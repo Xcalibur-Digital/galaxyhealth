@@ -1,53 +1,121 @@
 import axios from 'axios';
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../config/firebase';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider,
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword 
+} from 'firebase/auth';
+import { auth } from '../config/firebase';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const authService = {
-  async loginWithGoogle() {
+  // Google Auth
+  async signInWithGoogle() {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const { user } = result;
-      
-      // Send the token to your backend
-      const idToken = await user.getIdToken();
-      const response = await axios.post(`${API_URL}/auth/google`, { idToken });
-      
-      if (response.data.token) {
-        localStorage.setItem('user', JSON.stringify(response.data));
-      }
-      return response.data;
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const token = await result.user.getIdToken();
+      await this.registerWithBackend(result.user, token);
+      return result.user;
     } catch (error) {
-      console.error('Google login failed:', error);
+      console.error('Google auth error:', error);
+      if (error.code === 'auth/api-key-not-valid') {
+        throw new Error('Invalid Firebase configuration');
+      }
       throw error;
     }
   },
 
+  // Email/Password Auth
   async login(email, password) {
-    const response = await axios.post(`${API_URL}/auth/login`, {
-      email,
-      password
-    });
-    if (response.data.token) {
-      localStorage.setItem('user', JSON.stringify(response.data));
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const token = await result.user.getIdToken();
+      await this.registerWithBackend(result.user, token);
+      return result.user;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-    return response.data;
   },
 
   async register(userData) {
-    const response = await axios.post(`${API_URL}/auth/register`, userData);
-    if (response.data.token) {
-      localStorage.setItem('user', JSON.stringify(response.data));
+    try {
+      const { email, password, firstName, lastName } = userData;
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const token = await result.user.getIdToken();
+      
+      await this.registerWithBackend({
+        ...result.user,
+        firstName,
+        lastName
+      }, token);
+      
+      return result.user;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
     }
-    return response.data;
   },
 
-  logout() {
-    localStorage.removeItem('user');
+  async logout() {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
   },
 
+  // Backend Integration
+  async registerWithBackend(user, token) {
+    try {
+      await axios.post(`${API_URL}/auth/register`, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Backend registration error:', error);
+      throw error;
+    }
+  },
+
+  // Utility Functions
   getCurrentUser() {
-    return JSON.parse(localStorage.getItem('user'));
+    return auth.currentUser;
+  },
+
+  async getAuthToken() {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('No user is signed in');
+      }
+      return user.getIdToken();
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      throw error;
+    }
   }
-}; 
+};
+
+// Export commonly used functions directly
+export const { 
+  signInWithGoogle,
+  login,
+  register,
+  logout,
+  getCurrentUser,
+  getAuthToken 
+} = authService;
+
+export const getApiUrl = () => API_URL; 
