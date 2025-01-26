@@ -1,21 +1,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // User profiles
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users collection
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Allow initial creation and reading of user documents
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn();
       
-      // Validate role updates
-      match /profile {
-        allow update: if request.auth != null 
-          && request.auth.uid == userId
-          && (
-            !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['role']) 
-            || request.resource.data.role in ['nurse', 'physician', 'practice_staff', 'analyst']
-          );
-      }
+      // Allow users to update their own documents
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      
+      // Allow users to delete their own document
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // System configuration
+    match /config/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Role assignments
+    match /roleAssignments/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Patient data
+    match /patients/{patientId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (isAdmin() || resource.data.assignedTo == request.auth.uid);
     }
   }
 } 
