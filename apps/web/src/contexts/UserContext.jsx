@@ -1,114 +1,189 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../config/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, getAuth, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { storageService } from '../services/storageService';
+import { LoadingSpinner, ErrorDisplay } from '../components/common';
 
 // Create context outside of components
 const UserContext = createContext(null);
 
-// Named function for the hook
-function useUser() {
+// Create the hook
+const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
     throw new Error('useUser must be used within a UserProvider');
   }
   return context;
-}
+};
 
-// Named function for the provider component
-function UserProvider({ children }) {
+// Create the provider component
+const UserProvider = ({ children }) => {
+  console.log('UserProvider initializing');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    console.log('UserProvider mounted');
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        console.log('Auth state changed:', firebaseUser);
-        if (firebaseUser) {
-          // First, ensure user document exists
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          let userData;
-
-          try {
-            const docSnap = await getDoc(userDocRef);
-            if (docSnap.exists()) {
-              userData = docSnap.data();
-            } else {
-              // Create user document if it doesn't exist
-              const newUserData = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                photoURL: firebaseUser.photoURL,
-                role: firebaseUser.email === 'brendansmithelion@gmail.com' ? 'admin' : 'user',
-                createdAt: new Date().toISOString(),
-                lastUpdated: new Date().toISOString()
-              };
-              await setDoc(userDocRef, newUserData);
-              userData = newUserData;
-            }
-
-            setUser({
-              ...firebaseUser,
-              ...userData
-            });
-          } catch (error) {
-            console.error('Firestore error:', error);
-            // Fall back to basic user data if Firestore fails
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-              role: 'user'
-            });
-          }
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Error in auth state change:', error);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const login = async (userData) => {
-    console.log('Login called with:', userData);
-    setUser(userData);
-  };
-
-  const logout = async () => {
-    console.log('Logout called');
+  const createNewUser = async (firebaseUser) => {
     try {
-      await auth.signOut();
-      setUser(null);
+      const registrationDate = new Date().toISOString();
+      const isAdmin = firebaseUser.email === 'brendansmithelion@gmail.com';
+      
+      const newUserData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName || firebaseUser.email,
+        photoURL: firebaseUser.photoURL,
+        role: isAdmin ? 'admin' : 'user',
+        registeredAt: registrationDate,
+        createdAt: registrationDate,
+        lastUpdated: registrationDate,
+        isActive: true,
+        accountStatus: 'active'
+      };
+
+      // Create user document first
+      const userRef = doc(db, 'users', firebaseUser.uid);
+      await setDoc(userRef, newUserData);
+
+      // After user document is created, create settings
+      const settingsRef = doc(db, 'userSettings', firebaseUser.uid);
+      const settingsData = {
+        theme: 'dark',
+        notifications: true,
+        dashboardLayout: 'default',
+        language: 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        createdAt: registrationDate,
+        updatedAt: registrationDate
+      };
+      await setDoc(settingsRef, settingsData);
+
+      // Finally create preferences
+      const prefsRef = doc(db, 'userPreferences', firebaseUser.uid);
+      const prefsData = {
+        favoritePatients: [],
+        recentSearches: [],
+        customViews: [],
+        shortcuts: [],
+        createdAt: registrationDate,
+        updatedAt: registrationDate
+      };
+      await setDoc(prefsRef, prefsData);
+
+      return newUserData;
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error creating new user:', error);
       throw error;
     }
   };
 
+  useEffect(() => {
+    console.log('Setting up auth listener');
+    const auth = getAuth();
+    let unsubscribe;
+
+    try {
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        console.log('Auth state changed:', firebaseUser ? 'User logged in' : 'No user');
+        try {
+          setLoading(true);
+          console.log('Current firebaseUser:', firebaseUser?.email);
+          
+          if (firebaseUser) {
+            const userRef = doc(db, 'users', firebaseUser.uid);
+            console.log('Attempting to read user document for:', firebaseUser.uid);
+            
+            try {
+              const docSnap = await getDoc(userRef);
+              console.log('Document exists?', docSnap.exists());
+
+              let userData;
+              if (docSnap.exists()) {
+                userData = docSnap.data();
+                console.log('Retrieved user data:', userData);
+              } else {
+                console.log('Creating new user document');
+                userData = await createNewUser(firebaseUser);
+              }
+
+              setUser({
+                ...firebaseUser,
+                ...userData
+              });
+            } catch (error) {
+              console.error('Specific Firestore error:', {
+                code: error.code,
+                message: error.message,
+                details: error
+              });
+              throw error;
+            }
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Auth state change error:', {
+            code: error.code,
+            message: error.message,
+            details: error
+          });
+          setError(error);
+        } finally {
+          setLoading(false);
+        }
+      });
+    } catch (error) {
+      console.error('Auth setup error:', error);
+      setError(error);
+      setLoading(false);
+    }
+
+    return () => unsubscribe?.();
+  }, []);
+
   const value = {
     user,
     loading,
-    login,
-    logout
+    error,
+    login: async (userData) => {
+      setUser(userData);
+    },
+    logout: async () => {
+      try {
+        await signOut(auth);
+        setUser(null);
+      } catch (error) {
+        console.error('Logout error:', error);
+        throw error;
+      }
+    },
+    makeAdmin: async () => {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          role: 'admin',
+          updatedAt: new Date().toISOString()
+        });
+        
+        // Force token refresh to get new claims
+        await auth.currentUser.getIdToken(true);
+        window.location.reload();
+      } catch (error) {
+        console.error('Error making user admin:', error);
+      }
+    }
   };
 
-  console.log('UserContext value:', value);
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorDisplay error={error} />;
 
   return (
     <UserContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </UserContext.Provider>
   );
-}
+};
 
-// Export as named exports
-export { UserProvider, useUser }; 
+// Export everything at once at the bottom
+export { useUser, UserProvider }; 

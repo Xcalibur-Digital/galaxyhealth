@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
 import { TextInput, Button, Group, Box, Divider } from '@mantine/core';
-import { authService } from '../../services/authService';
+import { auth } from '../../config/firebase';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
-const LoginForm = ({ onSuccess }) => {
+const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    
     try {
-      const user = await authService.login(email, password);
-      onSuccess(user);
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      setError(err.message || 'Login failed');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -25,12 +23,11 @@ const LoginForm = ({ onSuccess }) => {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    setError('');
     try {
-      const user = await authService.handleGoogleAuth();
-      onSuccess(user);
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -43,14 +40,13 @@ const LoginForm = ({ onSuccess }) => {
         variant="outline"
         onClick={handleGoogleLogin}
         mb="md"
-        leftIcon={<img src="/google-icon.svg" alt="Google" width={20} />}
       >
         Continue with Google
       </Button>
       
       <Divider label="Or" labelPosition="center" mb="md" />
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleEmailLogin}>
         <TextInput
           required
           label="Email"

@@ -1,12 +1,13 @@
 import React from 'react';
-import { Center, Loader } from '@mantine/core';
+import { Center, Loader, Text, Stack } from '@mantine/core';
 
-const LoadingSpinner = () => {
-  return (
-    <Center style={{ height: '100%', minHeight: 200 }}>
+export const LoadingSpinner = ({ message = 'Loading...' }) => (
+  <Center style={{ height: '100%', minHeight: 200 }}>
+    <Stack align="center" spacing="xs">
       <Loader size="lg" />
-    </Center>
-  );
-};
+      <Text size="sm" color="dimmed">{message}</Text>
+    </Stack>
+  </Center>
+);
 
 export default LoadingSpinner; 

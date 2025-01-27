@@ -3,8 +3,70 @@ import { Link, useLocation } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { RoleBasedComponent } from './RoleBasedComponent';
 import './Navigation.css';
-import { Navbar, Group, Button } from '@mantine/core';
-import { IconHome, IconUsers, IconCalendar, IconSettings } from '@tabler/icons-react';
+import { Navbar, Stack, Button, createStyles, Box } from '@mantine/core';
+import { IconHome, IconUsers, IconCalendar, IconSettings, IconChartBar, IconCoin, IconDatabase } from '@tabler/icons-react';
+
+// Arcadia.io colors
+const ARCADIA_COLORS = {
+  purple: '#6E2B81',
+  lightPurple: '#8A3A9B',
+  green: '#00B6AD',
+  lightGreen: '#45C1B9',
+  red: '#B82C5D',
+  darkRed: '#8A2147'
+};
+
+const useStyles = createStyles((theme) => ({
+  button: {
+    position: 'relative',
+    border: 'none',
+    background: 'transparent',
+    color: 'white',
+    '& .mantine-Button-leftIcon': {
+      color: 'white'
+    },
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      inset: 0,
+      borderRadius: theme.radius.sm,
+      padding: '2px',
+      background: `linear-gradient(135deg, ${ARCADIA_COLORS.purple} 0%, ${ARCADIA_COLORS.red} 100%)`,
+      WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+      WebkitMaskComposite: 'xor',
+      maskComposite: 'exclude',
+      opacity: 0.5,
+      transition: 'opacity 0.3s ease'
+    },
+    '&[data-active]': {
+      background: 'transparent',
+      color: ARCADIA_COLORS.purple,
+      '& .mantine-Button-leftIcon': {
+        color: ARCADIA_COLORS.purple
+      },
+      '&::before': {
+        opacity: 1
+      },
+      '&:hover': {
+        background: 'transparent',
+        '&::before': {
+          opacity: 0.8,
+          background: `linear-gradient(135deg, ${ARCADIA_COLORS.lightPurple} 0%, ${ARCADIA_COLORS.darkRed} 100%)`
+        }
+      }
+    },
+    '& .mantine-Button-inner': {
+      justifyContent: 'flex-start'
+    },
+    '&:hover': {
+      background: 'transparent',
+      '&::before': {
+        opacity: 0.8
+      }
+    },
+    transition: 'all 0.3s ease'
+  }
+}));
 
 const ROLE_MENU_ITEMS = {
   nurse: [
@@ -33,23 +95,26 @@ const ROLE_MENU_ITEMS = {
 const Navigation = () => {
   const { user } = useUser();
   const location = useLocation();
+  const { classes } = useStyles();
 
   const isActiveRoute = (path) => {
     return location.pathname === path;
   };
 
   return (
-    <Navbar height="100vh" p="md" width={{ base: 250 }}>
-      <Navbar.Section>
-        <Group direction="column" spacing="xs" style={{ width: '100%' }}>
+    <Navbar width={{ base: 250 }} p="md">
+      <Stack spacing="xs" align="stretch" justify="space-between" h="100%">
+        <Stack spacing="xs">
           <Button
             component={Link}
-            to="/"
-            variant={isActiveRoute('/') ? 'filled' : 'subtle'}
+            to="/dashboard"
+            variant={isActiveRoute('/dashboard') ? 'filled' : 'subtle'}
             fullWidth
             leftIcon={<IconHome size={20} />}
+            className={classes.button}
+            data-active={isActiveRoute('/dashboard')}
           >
-            Dashboard
+            Home
           </Button>
           <Button
             component={Link}
@@ -57,29 +122,47 @@ const Navigation = () => {
             variant={isActiveRoute('/patients') ? 'filled' : 'subtle'}
             fullWidth
             leftIcon={<IconUsers size={20} />}
+            className={classes.button}
+            data-active={isActiveRoute('/patients')}
           >
             Patients
           </Button>
           <Button
             component={Link}
-            to="/appointments"
-            variant={isActiveRoute('/appointments') ? 'filled' : 'subtle'}
+            to="/performance"
+            variant={isActiveRoute('/performance') ? 'filled' : 'subtle'}
             fullWidth
-            leftIcon={<IconCalendar size={20} />}
+            leftIcon={<IconChartBar size={20} />}
+            className={classes.button}
+            data-active={isActiveRoute('/performance')}
           >
-            Appointments
+            Performance
           </Button>
           <Button
             component={Link}
-            to="/settings"
-            variant={isActiveRoute('/settings') ? 'filled' : 'subtle'}
+            to="/ehr-alerts"
+            variant={isActiveRoute('/ehr-alerts') ? 'filled' : 'subtle'}
             fullWidth
-            leftIcon={<IconSettings size={20} />}
+            leftIcon={<IconDatabase size={20} />}
+            className={classes.button}
+            data-active={isActiveRoute('/ehr-alerts')}
           >
-            Settings
+            EHR Alerts
           </Button>
-        </Group>
-      </Navbar.Section>
+        </Stack>
+
+        <Button
+          component={Link}
+          to="/settings"
+          variant={isActiveRoute('/settings') ? 'filled' : 'subtle'}
+          fullWidth
+          leftIcon={<IconSettings size={20} />}
+          className={classes.button}
+          data-active={isActiveRoute('/settings')}
+        >
+          Settings
+        </Button>
+      </Stack>
     </Navbar>
   );
 };

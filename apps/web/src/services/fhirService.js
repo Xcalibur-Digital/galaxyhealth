@@ -1,10 +1,15 @@
-import axios from 'axios';
-import { auth, getAuthToken } from '../config/firebase';
+import { auth } from '../config/firebase';
+import { fhirConfig } from '../config/fhirConfig';
 
-const FHIR_SERVER_URL = `${process.env.REACT_APP_API_URL}/fhir`;
-const FHIR_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+console.log('FHIR Config:', fhirConfig);
 
-console.log('FHIR_BASE_URL:', FHIR_BASE_URL);
+const getAuthToken = async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('No user is signed in');
+  }
+  return user.getIdToken();
+};
 
 export const fhirService = {
   async getPatientData(patientId) {
@@ -36,115 +41,92 @@ export const fhirService = {
   },
 
   async getVitals(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/Observation`, {
-      params: {
-        patient: patientId,
-        category: 'vital-signs',
-        _sort: '-date',
-        _count: 1
+    const token = await getAuthToken();
+    const response = await fetch(`${fhirConfig.baseUrl}/Observation?patient=${patientId}&category=vital-signs`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseVitals(response.data.entry || []);
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async getMedications(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/MedicationRequest`, {
-      params: {
-        patient: patientId,
-        status: 'active',
-        _include: 'MedicationRequest:medication'
+    const response = await fetch(`${fhirConfig.baseUrl}/MedicationRequest?patient=${patientId}&status=active&_include=MedicationRequest:medication`, {
+      headers: {
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseMedications(response.data.entry || []);
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async getAppointments(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/Appointment`, {
-      params: {
-        patient: patientId,
-        status: 'booked',
-        _sort: 'date',
-        _count: 5
+    const response = await fetch(`${fhirConfig.baseUrl}/Appointment?patient=${patientId}&status=booked&_sort=date&_count=5`, {
+      headers: {
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseAppointments(response.data.entry || []);
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async getConditions(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/Condition`, {
-      params: {
-        patient: patientId,
-        _sort: '-onset-date',
-        _count: 10
+    const response = await fetch(`${fhirConfig.baseUrl}/Condition?patient=${patientId}&_sort=-onset-date&_count=10`, {
+      headers: {
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseConditions(response.data.entry || []);
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async getAllergies(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/AllergyIntolerance`, {
-      params: {
-        patient: patientId,
-        _count: 10
+    const response = await fetch(`${fhirConfig.baseUrl}/AllergyIntolerance?patient=${patientId}&_count=10`, {
+      headers: {
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseAllergies(response.data.entry || []);
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async getImmunizations(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/Immunization`, {
-      params: {
-        patient: patientId,
-        _sort: '-date',
-        _count: 10
+    const response = await fetch(`${fhirConfig.baseUrl}/Immunization?patient=${patientId}&_sort=-date&_count=10`, {
+      headers: {
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseImmunizations(response.data.entry || []);
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async getLabResults(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/Observation`, {
-      params: {
-        patient: patientId,
-        category: 'laboratory',
-        _sort: '-date',
-        _count: 10
+    const response = await fetch(`${fhirConfig.baseUrl}/Observation?patient=${patientId}&category=laboratory&_sort=-date&_count=10`, {
+      headers: {
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseLabResults(response.data.entry || []);
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async getProcedures(patientId) {
-    const response = await axios.get(`${FHIR_SERVER_URL}/Procedure`, {
-      params: {
-        patient: patientId,
-        _sort: '-date',
-        _count: 10
+    const response = await fetch(`${fhirConfig.baseUrl}/Procedure?patient=${patientId}&_sort=-date&_count=10`, {
+      headers: {
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
-
-    return this.parseProcedures(response.data.entry || []);
-  },
-
-  async getGoogleToken() {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('No user logged in');
-      }
-      const token = await user.getIdToken(true);
-      return token;
-    } catch (error) {
-      console.error('Error getting Google token:', error);
-      throw error;
-    }
+    const data = await response.json();
+    return data.entry || [];
   },
 
   async searchPatients(searchTerm) {
@@ -155,16 +137,14 @@ export const fhirService = {
       identifier: searchTerm
     };
 
-    const response = await axios.get(`${FHIR_SERVER_URL}/Patient`, {
-      params: searchParams,
+    const response = await fetch(`${fhirConfig.baseUrl}/Patient?${new URLSearchParams(searchParams).toString()}`, {
       headers: {
-        'Accept': 'application/fhir+json',
-        'Content-Type': 'application/fhir+json',
-        'Authorization': `Bearer ${await this.getGoogleToken()}`
+        'Authorization': `Bearer ${await getAuthToken()}`,
+        'Accept': 'application/fhir+json'
       }
     });
 
-    if (!response.data) {
+    if (!response.ok) {
       console.error('No data received from FHIR server');
     } else {
       console.log('FHIR search successful:', {
@@ -358,7 +338,7 @@ export const fhirService = {
       params.append('name:contains', searchTerm.trim());
     }
 
-    const response = await fetch(`${FHIR_BASE_URL}/api/fhir/Patient?${params}`, {
+    const response = await fetch(`${fhirConfig.baseUrl}/api/fhir/Patient?${params}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/fhir+json'
@@ -374,7 +354,7 @@ export const fhirService = {
 
   getPatientDetails: async (id) => {
     const token = await getAuthToken();
-    const response = await fetch(`${FHIR_BASE_URL}/api/fhir/Patient/${id}`, {
+    const response = await fetch(`${fhirConfig.baseUrl}/api/fhir/Patient/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/fhir+json'
@@ -391,7 +371,7 @@ export const fhirService = {
   getPatientResources: async (patientId, resourceType) => {
     const token = await getAuthToken();
     const response = await fetch(
-      `${FHIR_BASE_URL}/api/fhir/${resourceType}?patient=${patientId}`,
+      `${fhirConfig.baseUrl}/api/fhir/${resourceType}?patient=${patientId}`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -405,16 +385,73 @@ export const fhirService = {
     }
 
     return response.json();
+  },
+
+  async getAuthHeaders() {
+    const token = await getAuthToken();
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/fhir+json'
+    };
+  },
+
+  async pushResource(resource) {
+    const token = await getAuthToken();
+    const response = await fetch(`${fhirConfig.baseUrl}/${resource.resourceType}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/fhir+json'
+      },
+      body: JSON.stringify(resource)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to push ${resource.resourceType}: ${errorText}`);
+    }
+
+    return response.json();
+  },
+
+  async pushBatch(resources) {
+    const token = await getAuthToken();
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'batch',
+      entry: resources.map(resource => ({
+        resource,
+        request: {
+          method: 'POST',
+          url: resource.resourceType
+        }
+      }))
+    };
+
+    const response = await fetch(fhirConfig.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/fhir+json'
+      },
+      body: JSON.stringify(bundle)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to push batch: ${errorText}`);
+    }
+
+    return response.json();
   }
 };
 
-export const searchFHIRPatients = async (search = '') => {
+export const searchFHIRPatients = async () => {
   try {
     console.log('Starting FHIR patient search...');
     const token = await getAuthToken();
-    console.log('Got auth token:', token ? 'Token received' : 'No token');
-
-    const url = `${FHIR_BASE_URL}/api/fhir/Patient${search ? `?name=${search}` : ''}`;
+    
+    const url = `${fhirConfig.baseUrl}/Patient`;
     console.log('Making request to:', url);
 
     const response = await fetch(url, {
@@ -425,17 +462,28 @@ export const searchFHIRPatients = async (search = '') => {
       }
     });
 
-    console.log('FHIR API Response status:', response.status);
-    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('FHIR API Error:', errorText);
       throw new Error(`Failed to fetch patients: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('FHIR API Response data:', data);
-    return data;
+    
+    // Transform FHIR Bundle to our format
+    return data.entry?.map(entry => {
+      const resource = entry.resource;
+      const name = resource.name?.[0] || {};
+      
+      return {
+        id: resource.id,
+        name: `${name.given?.[0] || ''} ${name.family || ''}`.trim() || 'Unknown',
+        identifier: resource.identifier?.[0]?.value || 'N/A',
+        gender: resource.gender || 'unknown',
+        birthDate: resource.birthDate || 'Unknown',
+        lastUpdated: new Date(resource.meta?.lastUpdated).toLocaleDateString(),
+        riskLevel: 'low' // This would come from risk assessment in a real app
+      };
+    }) || [];
   } catch (error) {
     console.error('Error in searchFHIRPatients:', error);
     throw error;
@@ -445,7 +493,7 @@ export const searchFHIRPatients = async (search = '') => {
 export const getFHIRPatient = async (id) => {
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${FHIR_BASE_URL}/api/fhir/Patient/${id}`, {
+    const response = await fetch(`${fhirConfig.baseUrl}/api/fhir/Patient/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -474,7 +522,7 @@ export const getRecentPatients = async (limit = 10) => {
     });
 
     // Construct URL with single /api prefix
-    const url = `${FHIR_BASE_URL}/api/fhir/Patient?${params}`;
+    const url = `${fhirConfig.baseUrl}/api/fhir/Patient?${params}`;
     console.log('Making request to:', url);
 
     const response = await fetch(url, {

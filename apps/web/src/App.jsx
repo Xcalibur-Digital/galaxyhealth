@@ -1,20 +1,24 @@
 import React from 'react';
-import { AppShell, Header, Text, Group } from '@mantine/core';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Navigation } from './components/layout/Navigation';
-import Dashboard from './pages/Dashboard';
-import PatientList from './components/patients/PatientList';
-import LoginPage from './components/auth/LoginPage';
+import { MantineProvider, AppShell, Header, Text, Box, Group } from '@mantine/core';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
-import './styles/index.css';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminRoute from './components/auth/AdminRoute';
+import { theme } from './styles/theme';
+import Navigation from './components/Navigation';
+import LoginPage from './components/auth/LoginPage';
+import Dashboard from './pages/Dashboard';
+import { LoadingSpinner } from './components/common';
+import PatientList from './components/patients/PatientList';
+import Settings from './pages/settings/Settings';
+import Performance from './pages/Performance';
+import EHRAlerts from './pages/EHRAlerts';
+import AIRecommendations from './pages/AIRecommendations';
+import './styles/Header.css';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useUser();
   
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingSpinner />;
   }
   
   if (!user) {
@@ -24,16 +28,11 @@ const PrivateRoute = ({ children }) => {
   return children;
 };
 
-const AppContent = () => {
+const AppLayout = () => {
   const { user } = useUser();
 
   if (!user) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
-    );
+    return <LoginPage />;
   }
 
   return (
@@ -41,15 +40,35 @@ const AppContent = () => {
       padding="md"
       navbar={<Navigation />}
       header={
-        <Header height={60} p="xs">
-          <Group position="apart">
-            <Text size="xl" weight={700}>Galaxy Health</Text>
-          </Group>
+        <Header height={60}>
+          <Box className="animated-header">
+            <Group position="apart" px="md" h="100%" w="100%">
+              <Text size="xl" weight={700} className="header-content">
+                Galaxy Health
+              </Text>
+              <Group spacing="xs" align="center" ml="auto">
+                <img 
+                  src="/arcadia-logo.svg" 
+                  alt="Arcadia.io" 
+                  style={{ height: 24 }}
+                  className="arcadia-logo"
+                />
+                <Text 
+                  size="sm" 
+                  weight={500} 
+                  color="white" 
+                  sx={{ opacity: 0.9 }}
+                >
+                  Powered by Arcadia.io
+                </Text>
+              </Group>
+            </Group>
+          </Box>
         </Header>
       }
     >
       <Routes>
-        <Route path="/" element={
+        <Route path="/dashboard" element={
           <PrivateRoute>
             <Dashboard />
           </PrivateRoute>
@@ -59,23 +78,27 @@ const AppContent = () => {
             <PatientList />
           </PrivateRoute>
         } />
-        <Route path="/appointments" element={
-          <PrivateRoute>
-            <Text>Appointments Coming Soon</Text>
-          </PrivateRoute>
-        } />
         <Route path="/settings" element={
           <PrivateRoute>
-            <Text>Settings Coming Soon</Text>
+            <Settings />
           </PrivateRoute>
         } />
-        <Route path="/admin" element={
+        <Route path="/performance" element={
           <PrivateRoute>
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
+            <Performance />
           </PrivateRoute>
         } />
+        <Route path="/ehr-alerts" element={
+          <PrivateRoute>
+            <EHRAlerts />
+          </PrivateRoute>
+        } />
+        <Route path="/ai-recommendations" element={
+          <PrivateRoute>
+            <AIRecommendations />
+          </PrivateRoute>
+        } />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AppShell>
   );
@@ -83,11 +106,13 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <Router>
-      <UserProvider>
-        <AppContent />
-      </UserProvider>
-    </Router>
+    <MantineProvider theme={theme} withGlobalStyles withNormalizeCSS>
+      <BrowserRouter>
+        <UserProvider>
+          <AppLayout />
+        </UserProvider>
+      </BrowserRouter>
+    </MantineProvider>
   );
 };
 

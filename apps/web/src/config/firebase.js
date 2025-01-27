@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // Add more detailed logging
 console.log('Firebase Config:', {
@@ -21,20 +21,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-console.log('Firebase Config:', firebaseConfig);
-Object.entries(firebaseConfig).forEach(([key, value]) => {
-  console.log(`Firebase config ${key} is set:`, value);
+// Only log non-sensitive config info
+console.log('Firebase config:', {
+  ...firebaseConfig,
+  apiKey: 'HIDDEN'
 });
 
 console.log('Initializing Firebase with config:', firebaseConfig);
 const app = initializeApp(firebaseConfig);
 console.log('Firebase initialized successfully');
 
-const auth = getAuth(app);
+// Initialize services
 const db = getFirestore(app);
-
-// Export initialized instances
-export { auth, db };
+const auth = getAuth(app);
 
 // Add auth state change listener
 auth.onAuthStateChanged((user) => {
@@ -42,7 +41,7 @@ auth.onAuthStateChanged((user) => {
 });
 
 // Get auth token function
-export const getAuthToken = async () => {
+const getAuthToken = async () => {
   const user = auth.currentUser;
   if (!user) {
     throw new Error('No user is signed in');
@@ -50,4 +49,6 @@ export const getAuthToken = async () => {
   return user.getIdToken();
 };
 
+// Export everything
+export { auth, db, getAuthToken };
 export default app; 

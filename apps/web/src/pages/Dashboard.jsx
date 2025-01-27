@@ -2,7 +2,8 @@ import React from 'react';
 import { Container, Grid, Card, Text, Group, Button, Title } from '@mantine/core';
 import { Link } from 'react-router-dom';
 import { IconUsers, IconCalendar, IconChartBar } from '@tabler/icons-react';
-import PatientList from '../components/patients/PatientList';
+import { useUser } from '../contexts/UserContext';
+import AIGuidance from '../components/dashboard/AIGuidance';
 
 const DashboardCard = ({ icon: Icon, title, value, link }) => (
   <Card shadow="sm" p="lg">
@@ -32,11 +33,20 @@ const DashboardCard = ({ icon: Icon, title, value, link }) => (
 );
 
 const Dashboard = () => {
+  const { user } = useUser();
+  const firstName = user?.displayName?.split(' ')[0] || 'there';
+
   return (
     <Container size="xl" py="xl">
-      <Title order={1} mb="xl">Dashboard</Title>
+      <Title order={1} mb="xl" align="center">
+        Welcome, {firstName}!
+      </Title>
       
-      <Grid mb="xl">
+      <Grid>
+        <Grid.Col span={12}>
+          <AIGuidance />
+        </Grid.Col>
+
         <Grid.Col span={4}>
           <DashboardCard
             icon={IconUsers}
@@ -62,8 +72,6 @@ const Dashboard = () => {
           />
         </Grid.Col>
       </Grid>
-
-      <PatientList />
     </Container>
   );
 };
