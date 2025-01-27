@@ -1,5 +1,6 @@
 .animated-header {
-  background: linear-gradient(-45deg, #6E2B81 0%, #B82C5D 100%);
+  background: var(--mantine-color-body);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
   background-size: 400% 400%;
   animation: gradient 15s ease infinite;
   width: 100%;
@@ -21,7 +22,7 @@
 }
 
 .header-content {
-  color: white;
+  color: var(--mantine-color-text);
   font-weight: 700;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
@@ -39,4 +40,13 @@
 
 .arcadia-logo:hover {
   opacity: 0.9;
+}
+
+[data-mantine-color-scheme="dark"] .animated-header {
+  background: var(--mantine-color-dark-6);
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+[data-mantine-color-scheme="dark"] .header-content {
+  color: var(--mantine-color-white);
 } 

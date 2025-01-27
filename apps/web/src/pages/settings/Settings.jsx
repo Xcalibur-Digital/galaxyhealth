@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Container, 
   Title, 
@@ -12,32 +12,82 @@ import {
   Group,
   Avatar,
   Divider,
-  Tabs
+  Tabs,
+  useMantineColorScheme,
+  Select
 } from '@mantine/core';
 import { 
   IconCheck, 
   IconAlertCircle, 
   IconUser, 
   IconSettings, 
-  IconBell 
+  IconBell,
+  IconSun,
+  IconMoonStars
 } from '@tabler/icons-react';
 import { useUser } from '../../contexts/UserContext';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { showNotification } from '@mantine/notifications';
 
 const Settings = () => {
   const { user } = useUser();
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [settings, setSettings] = useState({
     fhirServerUrl: '',
     debugMode: false,
-    darkMode: true,
-    notifications: true
+    notifications: true,
+    theme: colorScheme,
+    language: 'en',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    dashboardLayout: 'default',
+    emailNotifications: {
+      careGaps: true,
+      appointments: true,
+      riskScores: true
+    },
+    displayPreferences: {
+      compactView: false,
+      showMetricLabels: true,
+      defaultDateRange: '30days'
+    }
   });
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadUserSettings();
+  }, [user]);
+
+  const loadUserSettings = async () => {
+    try {
+      const settingsRef = doc(db, 'userSettings', user.uid);
+      const settingsSnap = await getDoc(settingsRef);
+      
+      if (settingsSnap.exists()) {
+        const savedSettings = settingsSnap.data();
+        setSettings(prev => ({
+          ...prev,
+          ...savedSettings,
+          theme: colorScheme
+        }));
+      } else {
+        await updateDoc(settingsRef, {
+          ...settings,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error('Error loading settings:', err);
+      setError('Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     try {
@@ -61,14 +111,29 @@ const Settings = () => {
     try {
       setSaving(true);
       const settingsRef = doc(db, 'userSettings', user.uid);
+      
       await updateDoc(settingsRef, {
         ...settings,
+        theme: colorScheme,
         updatedAt: new Date().toISOString()
       });
+
+      showNotification({
+        title: 'Settings Saved',
+        message: 'Your preferences have been updated successfully',
+        color: 'green'
+      });
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err.message);
+      console.error('Error saving settings:', err);
+      setError('Failed to save settings');
+      showNotification({
+        title: 'Error',
+        message: 'Failed to save settings',
+        color: 'red'
+      });
     } finally {
       setSaving(false);
     }
@@ -162,14 +227,58 @@ const Settings = () => {
                 })}
               />
 
+              <Group position="apart">
+                <Text>Theme Mode</Text>
+                <Switch
+                  checked={colorScheme === 'dark'}
+                  onChange={() => toggleColorScheme()}
+                  size="lg"
+                  onLabel={<IconSun size={16} stroke={2.5} />}
+                  offLabel={<IconMoonStars size={16} stroke={2.5} />}
+                />
+              </Group>
+
+              <Divider label="Display Preferences" />
               <Switch
-                label="Dark Mode"
-                description="Use dark theme"
-                checked={settings.darkMode}
-                onChange={(e) => setSettings({
-                  ...settings,
-                  darkMode: e.target.checked
-                })}
+                label="Compact View"
+                checked={settings.displayPreferences.compactView}
+                onChange={(e) => setSettings(prev => ({
+                  ...prev,
+                  displayPreferences: {
+                    ...prev.displayPreferences,
+                    compactView: e.currentTarget.checked
+                  }
+                }))}
+              />
+
+              <Switch
+                label="Show Metric Labels"
+                checked={settings.displayPreferences.showMetricLabels}
+                onChange={(e) => setSettings(prev => ({
+                  ...prev,
+                  displayPreferences: {
+                    ...prev.displayPreferences,
+                    showMetricLabels: e.currentTarget.checked
+                  }
+                }))}
+              />
+
+              <Select
+                label="Default Date Range"
+                value={settings.displayPreferences.defaultDateRange}
+                onChange={(value) => setSettings(prev => ({
+                  ...prev,
+                  displayPreferences: {
+                    ...prev.displayPreferences,
+                    defaultDateRange: value
+                  }
+                }))}
+                data={[
+                  { value: '7days', label: 'Last 7 Days' },
+                  { value: '30days', label: 'Last 30 Days' },
+                  { value: '90days', label: 'Last 90 Days' },
+                  { value: 'ytd', label: 'Year to Date' }
+                ]}
               />
 
               <Group position="right" mt="xl">

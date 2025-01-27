@@ -8,6 +8,7 @@ import { fhir } from './routes/fhir.js';
 import { userRoutes } from './routes/user.js';
 import { patientRoutes } from './routes/patients.js';
 import { setupAdminUser } from './config/setupAdmin.js';
+import * as functions from 'firebase-functions';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -15,12 +16,13 @@ const port = process.env.PORT || 3001;
 // Initialize admin user
 setupAdminUser().catch(console.error);
 
-// Enable CORS for development
+// Configure CORS
 app.use(cors({
-  origin: ['http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: [
+    'https://galaxyhealth.web.app',
+    'http://localhost:3000'
+  ],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -57,4 +59,6 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log(`API Server is running on port: ${port}`);
   console.log(`Health check available at: http://localhost:${port}/health`);
-}); 
+});
+
+export const api = functions.https.onRequest(app); 

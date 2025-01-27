@@ -11,24 +11,28 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Cohort Metrics rules
+    // Allow read access to cohort metrics for any authenticated user
     match /cohortMetrics/{cohortId} {
       allow read: if isAuthenticated();
-      allow write: if isUserAuthorized() && 
-        request.resource.data.updatedAt is timestamp;
+      allow write: if isAuthenticated();
       
       // Allow access to recommendations subcollection
       match /recommendations/{recommendationId} {
         allow read: if isAuthenticated();
-        allow write: if isUserAuthorized();
+        allow write: if isAuthenticated();
       }
     }
 
-    // Patient Care Pathways rules
+    // Allow access to patient care pathways
     match /patientCarePathways/{pathwayId} {
       allow read: if isAuthenticated();
-      allow write: if isUserAuthorized() && 
-        request.resource.data.updatedAt is timestamp;
+      allow write: if isAuthenticated();
+    }
+
+    // Allow access to interventions
+    match /interventions/{interventionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
     // User profiles

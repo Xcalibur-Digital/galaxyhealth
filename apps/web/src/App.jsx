@@ -13,6 +13,8 @@ import Performance from './pages/Performance';
 import EHRAlerts from './pages/EHRAlerts';
 import AIRecommendations from './pages/AIRecommendations';
 import './styles/Header.css';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { Notifications } from '@mantine/notifications';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useUser();
@@ -106,13 +108,14 @@ const AppLayout = () => {
 
 const App = () => {
   return (
-    <MantineProvider theme={theme} withGlobalStyles withNormalizeCSS>
+    <ThemeProvider>
+      <Notifications />
       <BrowserRouter>
         <UserProvider>
           <AppLayout />
         </UserProvider>
       </BrowserRouter>
-    </MantineProvider>
+    </ThemeProvider>
   );
 };
 

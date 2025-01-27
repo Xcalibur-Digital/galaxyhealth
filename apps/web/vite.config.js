@@ -2,9 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [react({
-    include: "**/*.jsx",
-  })],
+  plugins: [react()],
+  root: '.',
   server: {
     port: 3000,
     host: true
@@ -20,6 +19,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@': '/src',
       '@mantine/core': '@mantine/core/esm',
       '@mantine/hooks': '@mantine/hooks/esm'
     }

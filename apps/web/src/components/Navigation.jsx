@@ -21,9 +21,9 @@ const useStyles = createStyles((theme) => ({
     position: 'relative',
     border: 'none',
     background: 'transparent',
-    color: 'white',
+    color: theme.colorScheme === 'dark' ? theme.colors.gray[4] : theme.colors.gray[7],
     '& .mantine-Button-leftIcon': {
-      color: 'white'
+      color: theme.colorScheme === 'dark' ? theme.colors.gray[4] : theme.colors.gray[7]
     },
     '&::before': {
       content: '""',
