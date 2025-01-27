@@ -3,7 +3,7 @@ import axios from 'axios';
 import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
 import { createAuthenticatedClient, fhirStorePath } from '../config/googleCloud.js';
-import { verifyAuthToken } from './auth.js';
+import { verifyAuthToken } from '../middleware/auth.js';
 import { 
   generateRelatedResources, 
   calculateRelatedResourcesCount 
@@ -145,24 +145,6 @@ async function makeHapiRequest(url, params, retries = 0) {
   return requestQueue.add(makeAxiosRequest);
 }
 
-// Middleware to verify Firebase token
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'No authorization header' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
-    req.user = decodedToken;
-    next();
-  } catch (error) {
-    console.error('Auth error:', error);
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
 // Add auth middleware to protect FHIR routes
 router.use(verifyAuthToken);
 
@@ -174,14 +156,9 @@ const limiter = rateLimit({
 
 // Configure speed limiting
 const speedLimiter = slowDown({
-  windowMs: 60 * 1000, // 1 minute window
-  delayAfter: Math.floor((process.env.GOOGLE_HEALTHCARE_RATE_LIMIT || 50) * 0.8), // slow down after 80% of limit
-  delayMs: () => 500, // Fixed delay of 500ms per request over limit
-  // Or use this for the old behavior:
-  // delayMs: (used, req) => {
-  //   const delayAfter = req.slowDown.limit;
-  //   return (used - delayAfter) * 500;
-  // },
+  windowMs: 60 * 1000,
+  delayAfter: Math.floor((process.env.GOOGLE_HEALTHCARE_RATE_LIMIT || 50) * 0.8),
+  delayMs: () => 500
 });
 
 // Apply rate limiting to all FHIR routes
@@ -191,68 +168,12 @@ router.use(speedLimiter);
 // Get recent patients with related resources
 router.get('/Patient', async (req, res) => {
   try {
-    console.log('Received request for patients with includes');
     const client = await createAuthenticatedClient();
-    
-    // Basic parameters
-    const params = new URLSearchParams();
-    params.append('_count', req.query._count || '10');
-    params.append('_sort', req.query._sort || '-_lastUpdated');
-
-    // Add includes if supported by the FHIR server
-    if (req.query._include) {
-      const includes = req.query._include.split(',');
-      // Add each include parameter separately
-      includes.forEach(include => {
-        if (include.trim()) {
-          params.append('_include', include.trim());
-        }
-      });
-    }
-
-    // Add reverse includes if supported
-    if (req.query._revinclude) {
-      const revIncludes = req.query._revinclude.split(',');
-      // Add each revinclude parameter separately
-      revIncludes.forEach(revInclude => {
-        if (revInclude.trim()) {
-          params.append('_revinclude', revInclude.trim());
-        }
-      });
-    }
-
-    console.log('Making request to FHIR server with params:', params.toString());
-
-    try {
-      const response = await client.get(`/Patient?${params.toString()}`);
-      console.log('Successfully fetched patients with related resources');
-      res.json(response.data);
-    } catch (apiError) {
-      console.error('FHIR API Error:', apiError.response?.data || apiError.message);
-      
-      // If includes cause an error, try without them
-      if (apiError.response?.status === 400 && (req.query._include || req.query._revinclude)) {
-        console.log('Retrying without includes...');
-        const basicParams = new URLSearchParams({
-          _count: req.query._count || '10',
-          _sort: req.query._sort || '-_lastUpdated'
-        });
-        
-        const basicResponse = await client.get(`/Patient?${basicParams.toString()}`);
-        res.json(basicResponse.data);
-      } else {
-        throw apiError;
-      }
-    }
+    const response = await client.get('/Patient');
+    res.json(response.data);
   } catch (error) {
-    console.error('Error fetching patients:', error);
-    res.status(500).json({
-      error: {
-        message: 'Failed to fetch patients',
-        details: error.message,
-        originalError: error.response?.data
-      }
-    });
+    console.error('FHIR request failed:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -1039,4 +960,4 @@ router.get('/test', (req, res) => {
   res.json({ message: 'FHIR API is working' });
 });
 
-export const fhir = router; 
+export { router as fhir }; 

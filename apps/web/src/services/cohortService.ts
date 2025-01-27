@@ -110,6 +110,32 @@ interface InterventionEffectiveness {
   successfulPatients: number;
 }
 
+function groupInterventionsByType(interventions: Intervention[]): Record<string, number> {
+  return interventions.reduce((acc, intervention) => {
+    acc[intervention.type] = (acc[intervention.type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+}
+
+function summarizeInterventionOutcomes(interventions: Intervention[]): {
+  improved: number;
+  unchanged: number;
+  declined: number;
+} {
+  return interventions.reduce((acc, intervention) => {
+    const lastOutcome = intervention.outcomes[intervention.outcomes.length - 1];
+    const firstOutcome = intervention.outcomes[0];
+    
+    if (!lastOutcome || !firstOutcome) return acc;
+    
+    if (lastOutcome.value > firstOutcome.value) acc.improved++;
+    else if (lastOutcome.value < firstOutcome.value) acc.declined++;
+    else acc.unchanged++;
+    
+    return acc;
+  }, { improved: 0, unchanged: 0, declined: 0 });
+}
+
 export const cohortService = {
   // Get all cohort metrics
   async getCohortMetrics(): Promise<CohortMetrics[]> {
@@ -429,7 +455,7 @@ export const cohortService = {
     if (!pathwayDoc.exists()) throw new Error('Pathway not found');
 
     const pathway = pathwayDoc.data();
-    const intervention = pathway.interventions.find(i => i.id === interventionId);
+    const intervention = pathway.interventions.find((i: Intervention) => i.id === interventionId);
     
     if (!intervention) throw new Error('Intervention not found');
 
@@ -776,5 +802,119 @@ export const cohortService = {
       patientCount: 1,
       successfulPatients: improvement > 0 ? 1 : 0
     };
+  },
+
+  async getInterventionsInDateRange(
+    cohortId: string,
+    startDate: Date,
+    endDate: Date,
+    interventionType?: string
+  ): Promise<Intervention[]> {
+    const snapshot = await getDocs(
+      query(
+        collection(db, 'interventions'),
+        where('cohortId', '==', cohortId),
+        where('startDate', '>=', startDate),
+        where('startDate', '<=', endDate),
+        ...(interventionType ? [where('type', '==', interventionType)] : [])
+      )
+    );
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Intervention[];
+  },
+
+  async getRiskTransitions(
+    cohortId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{ from: string; to: string; count: number }[]> {
+    const pathways = await getDocs(
+      query(
+        collection(db, 'patientCarePathways'),
+        where('cohortId', '==', cohortId)
+      )
+    );
+    
+    const transitions = pathways.docs
+      .map(doc => doc.data())
+      .flatMap(pathway => {
+        const relevantHistory = pathway.riskHistory.filter(h => 
+          new Date(h.timestamp) >= startDate && 
+          new Date(h.timestamp) <= endDate
+        );
+        return relevantHistory.slice(1).map((h, i) => ({
+          from: relevantHistory[i].level,
+          to: h.level,
+          timestamp: h.timestamp
+        }));
+      })
+      .reduce((acc, t) => {
+        const key = `${t.from}-${t.to}`;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+    return Object.entries(transitions).map(([key, count]) => {
+      const [from, to] = key.split('-');
+      return { from, to, count: count as number };
+    });
+  },
+
+  async getClosedGapsInDateRange(
+    cohortId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    const pathways = await getDocs(
+      query(collection(db, 'patientCarePathways'), where('cohortId', '==', cohortId))
+    );
+    
+    return pathways.docs
+      .map(doc => doc.data())
+      .flatMap(pathway => pathway.careGaps)
+      .filter(gap => 
+        gap.status === 'closed' && 
+        new Date(gap.closureHistory[gap.closureHistory.length - 1].timestamp) >= startDate &&
+        new Date(gap.closureHistory[gap.closureHistory.length - 1].timestamp) <= endDate
+      ).length;
+  },
+
+  async getIntervention(interventionId: string): Promise<Intervention> {
+    const snapshot = await getDocs(
+      query(
+        collection(db, 'interventions'),
+        where('id', '==', interventionId),
+        limit(1)
+      )
+    );
+    
+    if (snapshot.empty) throw new Error('Intervention not found');
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Intervention;
+  },
+
+  private calculateROI(intervention: Intervention): number {
+    const cost = intervention.cost || 0;
+    const outcomes = intervention.outcomes;
+    const value = outcomes.length > 0 ? outcomes[outcomes.length - 1].value : 0;
+    
+    return cost > 0 ? ((value - cost) / cost) * 100 : 0;
+  },
+
+  private aggregateOutcomesByMetric(interventions: Intervention[]) {
+    return interventions
+      .flatMap(i => i.outcomes)
+      .reduce((acc, outcome) => {
+        if (!acc[outcome.metric]) {
+          acc[outcome.metric] = {
+            total: 0,
+            count: 0
+          };
+        }
+        acc[outcome.metric].total += outcome.value;
+        acc[outcome.metric].count++;
+        return acc;
+      }, {} as Record<string, { total: number; count: number }>);
   }
 }; 

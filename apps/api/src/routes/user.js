@@ -1,65 +1,103 @@
 import express from 'express';
-import admin from 'firebase-admin';
-import { verifyAuthToken } from './auth.js';
-import User from '../models/User.js';
-import { requireRole } from '../middleware/roleMiddleware.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { verifyAuthToken, requireRole } from '../middleware/auth.js';
+import { db } from '../config/firebase.js';
 
 const router = express.Router();
 
-// Apply auth middleware to all user routes
+// Protect all user routes with auth
 router.use(verifyAuthToken);
 
 // Get user profile
-router.get('/profile', authenticateToken, async (req, res) => {
+router.get('/profile', async (req, res) => {
   try {
-    const user = await User.findById(req.user.uid);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    const userDoc = await db.collection('users').doc(req.user.uid).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ 
+        error: { message: 'User profile not found' } 
+      });
     }
-    res.json(user);
+
+    res.json(userDoc.data());
   } catch (error) {
-    console.error('Error getting user profile:', error);
-    res.status(500).json({ error: 'Failed to get user profile' });
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ 
+      error: { message: 'Failed to fetch user profile' } 
+    });
   }
 });
 
-// Update user profile with role validation
+// Update user profile
 router.patch('/profile', async (req, res) => {
   try {
-    const uid = req.user.uid;
     const updates = req.body;
-    
-    const user = new User(uid);
+    const userRef = db.collection('users').doc(req.user.uid);
 
-    if (updates.role) {
-      // Role updates require additional validation
-      const validRoles = ['nurse', 'physician', 'practice_staff', 'analyst'];
-      if (!validRoles.includes(updates.role)) {
-        return res.status(400).json({
-          error: {
-            message: 'Invalid role specified',
-            validRoles
-          }
-        });
-      }
+    // Don't allow updating sensitive fields
+    delete updates.role;
+    delete updates.email;
+    delete updates.uid;
 
-      // Update role with audit trail
-      const updatedUser = await user.updateRole(updates.role, req.user.uid);
-      return res.json(updatedUser);
-    }
+    await userRef.update({
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
 
-    // Regular profile updates
-    const updatedUser = await user.update(updates);
-    res.json(updatedUser);
-
+    const updatedDoc = await userRef.get();
+    res.json(updatedDoc.data());
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({
-      error: {
-        message: 'Failed to update user profile',
-        details: error.message
-      }
+    res.status(500).json({ 
+      error: { message: 'Failed to update user profile' } 
+    });
+  }
+});
+
+// Get user settings
+router.get('/settings', async (req, res) => {
+  try {
+    const settingsDoc = await db.collection('userSettings').doc(req.user.uid).get();
+    
+    if (!settingsDoc.exists) {
+      // Create default settings if none exist
+      const defaultSettings = {
+        theme: 'dark',
+        notifications: true,
+        dashboardLayout: 'default',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await db.collection('userSettings').doc(req.user.uid).set(defaultSettings);
+      return res.json(defaultSettings);
+    }
+
+    res.json(settingsDoc.data());
+  } catch (error) {
+    console.error('Error fetching user settings:', error);
+    res.status(500).json({ 
+      error: { message: 'Failed to fetch user settings' } 
+    });
+  }
+});
+
+// Update user settings
+router.patch('/settings', async (req, res) => {
+  try {
+    const updates = req.body;
+    const settingsRef = db.collection('userSettings').doc(req.user.uid);
+
+    await settingsRef.update({
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+
+    const updatedDoc = await settingsRef.get();
+    res.json(updatedDoc.data());
+  } catch (error) {
+    console.error('Error updating user settings:', error);
+    res.status(500).json({ 
+      error: { message: 'Failed to update user settings' } 
     });
   }
 });
@@ -68,13 +106,8 @@ router.patch('/profile', async (req, res) => {
 router.get('/role', async (req, res) => {
   try {
     const uid = req.user.uid;
-    const userDoc = await admin.firestore()
-      .collection('users')
-      .doc(uid)
-      .get();
-
+    const userDoc = await db.collection('users').doc(uid).get();
     const role = userDoc.exists ? userDoc.data().role : null;
-
     res.json({ role });
   } catch (error) {
     console.error('Error fetching user role:', error);
@@ -91,8 +124,8 @@ router.get('/role', async (req, res) => {
 router.get('/role-history/:userId', requireRole(['admin']), async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = new User(userId);
-    const roleHistory = await user.getRoleHistory();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const roleHistory = userDoc.data()?.roleHistory || [];
     res.json(roleHistory);
   } catch (error) {
     res.status(500).json({

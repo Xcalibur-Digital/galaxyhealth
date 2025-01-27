@@ -1,38 +1,91 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
     
     function isAdmin() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && (
+        request.auth.token.email == 'brendansmithelion@gmail.com' ||
+        request.auth.token.admin == true
+      );
     }
     
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Users collection
-    match /users/{userId} {
-      // Allow initial creation and reading of user documents
-      allow create: if isSignedIn() && request.auth.uid == userId;
+    // System configuration
+    match /system/{document=**} {
       allow read: if isSignedIn();
-      
-      // Allow users to update their own documents
-      allow update: if isSignedIn() && request.auth.uid == userId;
-      
-      // Allow users to delete their own document
-      allow delete: if isSignedIn() && request.auth.uid == userId;
+      allow write: if isSignedIn() && (
+        request.auth.token.email == 'brendansmithelion@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
-    // System configuration
-    match /config/{document=**} {
+    // User data
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isAdmin()
+      );
+    }
+
+    // Sample data collections
+    match /patients/{patientId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    match /conditions/{conditionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /observations/{observationId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // App settings
+    match /appSettings/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /userSettings/{userId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isAdmin()
+      );
+    }
+
+    match /userPreferences/{userId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isAdmin()
+      );
+    }
+
+    // Audit logs
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    // System logs
+    match /systemLogs/{logId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Error logs
+    match /errorLogs/{logId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
     }
 
     // Role assignments
@@ -41,10 +94,9 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Patient data
-    match /patients/{patientId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && (isAdmin() || resource.data.assignedTo == request.auth.uid);
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 } 

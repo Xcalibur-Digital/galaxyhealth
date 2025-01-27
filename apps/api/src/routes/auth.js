@@ -3,6 +3,8 @@ import { auth } from '../config/firebase.js';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { db } from '../config/firebase.js';
+import { storageService } from '../services/storageService.js';
+import { GoogleAuth } from 'google-auth-library';
 
 const router = express.Router();
 
@@ -122,7 +124,19 @@ router.post('/google/login', async (req, res) => {
   }
 });
 
-// Handle new user creation
+// Add this function to set admin claims
+const setAdminClaim = async (uid, email) => {
+  try {
+    if (email === 'brendansmithelion@gmail.com') {
+      await auth.setCustomUserClaims(uid, { admin: true });
+      console.log(`Set admin claims for ${email}`);
+    }
+  } catch (error) {
+    console.error('Error setting admin claims:', error);
+  }
+};
+
+// Update createUserDocument to include this
 export const createUserDocument = async (user) => {
   const { uid, email, displayName, photoURL } = user;
   
@@ -133,30 +147,79 @@ export const createUserDocument = async (user) => {
     if (!snapshot.exists) {
       const isAdmin = email === 'brendansmithelion@gmail.com';
       
+      if (isAdmin) {
+        await setAdminClaim(uid, email);
+      }
+
       const userData = {
         uid,
         email,
         displayName: displayName || email.split('@')[0],
         photoURL,
         role: isAdmin ? 'admin' : 'user',
-        createdAt: new Date(),
-        lastUpdated: new Date(),
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
         isActive: true,
+        accountStatus: 'active',
+        statusUpdatedAt: new Date().toISOString(),
         profileComplete: false,
-        permissions: isAdmin ? ['all'] : ['basic']
+        permissions: isAdmin ? ['all'] : ['basic'],
+        registeredAt: new Date().toISOString()
       };
 
       await userRef.set(userData);
-      console.log(`Created new user document for ${email}`);
       
+      // Log account activation
+      await storageService.logAuditEvent({
+        type: 'ACCOUNT_STATUS_CHANGE',
+        userId: uid,
+        email,
+        details: {
+          oldStatus: null,
+          newStatus: 'active',
+          timestamp: new Date().toISOString(),
+          action: 'ACCOUNT_ACTIVATED'
+        }
+      });
+
+      await db.collection('userSettings').doc(uid).set({
+        theme: 'dark',
+        notifications: true,
+        dashboardLayout: 'default',
+        language: 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
       if (isAdmin) {
         console.log(`Configured ${email} as admin`);
       }
+
+      return userData;
     }
+
+    return snapshot.data();
   } catch (error) {
     console.error('Error creating user document:', error);
     throw error;
   }
 };
+
+router.post('/healthcare-token', verifyAuthToken, async (req, res) => {
+  try {
+    const auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/cloud-healthcare']
+    });
+
+    const client = await auth.getClient();
+    const accessToken = await client.getAccessToken();
+
+    res.json({ accessToken: accessToken.token });
+  } catch (error) {
+    console.error('Error getting healthcare token:', error);
+    res.status(500).json({ error: 'Failed to get healthcare token' });
+  }
+});
 
 export { router as auth }; 

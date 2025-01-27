@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isUserAuthorized() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Cohort Metrics rules
+    match /cohortMetrics/{cohortId} {
+      allow read: if isAuthenticated();
+      allow write: if isUserAuthorized() && 
+        request.resource.data.updatedAt is timestamp;
+      
+      // Allow access to recommendations subcollection
+      match /recommendations/{recommendationId} {
+        allow read: if isAuthenticated();
+        allow write: if isUserAuthorized();
+      }
+    }
+
+    // Patient Care Pathways rules
+    match /patientCarePathways/{pathwayId} {
+      allow read: if isAuthenticated();
+      allow write: if isUserAuthorized() && 
+        request.resource.data.updatedAt is timestamp;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || isUserAuthorized());
+      allow write: if request.auth.uid == userId;
+    }
+  }
+} 
