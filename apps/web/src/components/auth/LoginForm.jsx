@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { TextInput, Button, Group, Box, Divider } from '@mantine/core';
+import { TextInput, Button, Group, Box, Divider, Stack } from '@mantine/core';
 import { auth } from '../../config/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { IconBrandGoogle } from '@tabler/icons-react';
 
-const LoginForm = () => {
+const LoginForm = ({ onGoogleSignIn }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,14 +36,16 @@ const LoginForm = () => {
 
   return (
     <Box sx={{ maxWidth: 300 }} mx="auto">
-      <Button
-        fullWidth
-        variant="outline"
-        onClick={handleGoogleLogin}
-        mb="md"
-      >
-        Continue with Google
-      </Button>
+      <Stack spacing="md">
+        <Button 
+          leftIcon={<IconBrandGoogle size={16} />}
+          variant="default"
+          onClick={onGoogleSignIn}
+          fullWidth
+        >
+          Continue with Google
+        </Button>
+      </Stack>
       
       <Divider label="Or" labelPosition="center" mb="md" />
       

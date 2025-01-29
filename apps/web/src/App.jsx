@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { MantineProvider, AppShell, Header, Text, Box, Group } from '@mantine/core';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { theme } from './styles/theme';
 import Navigation from './components/Navigation';
@@ -21,6 +21,8 @@ import { NotificationCenter } from './components/notifications/NotificationCente
 import { createStyles } from '@mantine/core';
 import { AnimatePresence } from 'framer-motion';
 import PageTransition from './components/transitions/PageTransition';
+import useNotificationStore from './stores/notificationStore';
+import PatientDetails from './components/patients/PatientDetails';
 
 const useStyles = createStyles((theme) => ({
   appShell: {
@@ -50,6 +52,13 @@ const AppLayout = () => {
   const { classes } = useStyles();
   const { user } = useUser();
   const location = useLocation();
+  const initializeNotifications = useNotificationStore(state => state.initialize);
+
+  useEffect(() => {
+    // Initialize notifications when app loads
+    const unsubscribe = initializeNotifications();
+    return () => unsubscribe?.();
+  }, [initializeNotifications]);
 
   if (!user) {
     return <LoginPage />;
@@ -63,25 +72,19 @@ const AppLayout = () => {
         <Header height={60}>
           <Box className="animated-header">
             <Group position="apart" px="md" h="100%" w="100%">
-              <Text size="xl" weight={700} className="header-content">
-                Galaxy Health
-              </Text>
-              <Group spacing="xs" align="center" ml="auto">
+            
+              <Group spacing="xs" align="left" ml="0">
                 <img 
                   src="/arcadia-logo.svg" 
                   alt="Arcadia.io" 
                   style={{ height: 24 }}
                   className="arcadia-logo"
                 />
-                <Text 
-                  size="sm" 
-                  weight={500} 
-                  color="white" 
-                  sx={{ opacity: 0.9 }}
-                >
-                  Powered by Arcadia.io
-                </Text>
+             
               </Group>
+              <Text size="xl" weight={700} className="header-content">
+                Galaxy Health
+              </Text>
               <NotificationCenter />
             </Group>
           </Box>
@@ -102,6 +105,13 @@ const AppLayout = () => {
             <PrivateRoute>
               <PageTransition>
                 <PatientList />
+              </PageTransition>
+            </PrivateRoute>
+          } />
+          <Route path="/patients/:id" element={
+            <PrivateRoute>
+              <PageTransition>
+                <PatientDetails />
               </PageTransition>
             </PrivateRoute>
           } />
@@ -139,17 +149,67 @@ const AppLayout = () => {
   );
 };
 
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <UserProvider>
+        <PatientProvider>
+          <AppLayout />
+        </PatientProvider>
+      </UserProvider>
+    ),
+    children: [
+      {
+        path: "dashboard",
+        element: <PrivateRoute><PageTransition><Dashboard /></PageTransition></PrivateRoute>
+      },
+      {
+        path: "patients",
+        element: <PrivateRoute><PageTransition><PatientList /></PageTransition></PrivateRoute>
+      },
+      {
+        path: "patients/:id",
+        element: <PrivateRoute><PageTransition><PatientDetails /></PageTransition></PrivateRoute>
+      },
+      {
+        path: "settings",
+        element: <PrivateRoute><Settings /></PrivateRoute>
+      },
+      {
+        path: "performance",
+        element: <PrivateRoute><Performance /></PrivateRoute>
+      },
+      {
+        path: "ehr-alerts",
+        element: <PrivateRoute><EHRAlerts /></PrivateRoute>
+      },
+      {
+        path: "ai-recommendations",
+        element: <PrivateRoute><AIRecommendations /></PrivateRoute>
+      },
+      {
+        path: "patient-context",
+        element: <PrivateRoute><PageTransition><PatientContextHistory /></PageTransition></PrivateRoute>
+      },
+      {
+        path: "",
+        element: <Navigate to="/dashboard" replace />
+      }
+    ]
+  }
+], {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true
+  }
+});
+
 const App = () => {
   return (
     <ThemeProvider>
       <Notifications position="top-right" />
-      <BrowserRouter>
-        <UserProvider>
-          <PatientProvider>
-            <AppLayout />
-          </PatientProvider>
-        </UserProvider>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </ThemeProvider>
   );
 };

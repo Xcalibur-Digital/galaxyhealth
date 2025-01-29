@@ -1,5 +1,5 @@
 import React from 'react';
-import { Popover, ActionIcon, Badge, Stack, Text, Button, Group } from '@mantine/core';
+import { Popover, ActionIcon, Badge, Stack, Text, Button, Group, Box } from '@mantine/core';
 import { IconBell } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../../stores/notificationStore';
@@ -17,7 +17,7 @@ export const NotificationCenter = () => {
   };
 
   return (
-    <Popover width={350} position="bottom-end">
+    <Popover width={400} position="bottom-end">
       <Popover.Target>
         <div style={{ position: 'relative' }}>
           <ActionIcon size="lg">
@@ -40,9 +40,9 @@ export const NotificationCenter = () => {
       </Popover.Target>
 
       <Popover.Dropdown>
-        <Stack spacing="xs">
+        <Stack spacing="md">
           <Group position="apart">
-            <Text weight={500}>Notifications</Text>
+            <Text weight={500} size="lg">Notifications</Text>
             {notifications.length > 0 && (
               <Button 
                 variant="subtle" 
@@ -54,33 +54,47 @@ export const NotificationCenter = () => {
             )}
           </Group>
 
-          {notifications.length === 0 ? (
-            <Text color="dimmed" size="sm" align="center">
-              No notifications
-            </Text>
-          ) : (
-            notifications.map((notification) => (
-              <Button
-                key={notification.id}
-                variant={notification.read ? 'subtle' : 'light'}
-                color={notification.read ? 'gray' : 'blue'}
-                fullWidth
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <Stack spacing={2} align="flex-start">
-                  <Text size="sm" weight={500}>
-                    {notification.title}
-                  </Text>
-                  <Text size="xs" color="dimmed">
-                    {notification.message}
-                  </Text>
-                  <Text size="xs" color="dimmed">
-                    {new Date(notification.timestamp).toLocaleString()}
-                  </Text>
-                </Stack>
-              </Button>
-            ))
-          )}
+          <Box sx={{ maxHeight: '400px', overflow: 'auto' }}>
+            <Stack spacing="md">
+              {notifications.length === 0 ? (
+                <Text color="dimmed" size="sm" align="center" py="md">
+                  No notifications
+                </Text>
+              ) : (
+                notifications.map((notification) => (
+                  <Button
+                    key={notification.id}
+                    variant={notification.read ? 'subtle' : 'light'}
+                    color={notification.read ? 'gray' : 'blue'}
+                    fullWidth
+                    onClick={() => handleNotificationClick(notification)}
+                    styles={{
+                      root: {
+                        padding: '16px',
+                        height: 'auto',
+                        textAlign: 'left'
+                      },
+                      inner: {
+                        justifyContent: 'flex-start'
+                      }
+                    }}
+                  >
+                    <Stack spacing="xs" align="flex-start">
+                      <Text size="sm" weight={500} lineClamp={2}>
+                        {notification.title}
+                      </Text>
+                      <Text size="xs" color="dimmed" lineClamp={2}>
+                        {notification.message}
+                      </Text>
+                      <Text size="xs" color="dimmed">
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </Text>
+                    </Stack>
+                  </Button>
+                ))
+              )}
+            </Stack>
+          </Box>
         </Stack>
       </Popover.Dropdown>
     </Popover>

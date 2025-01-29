@@ -18,18 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const useStyles = createStyles((theme) => ({
   navbar: {
     backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
-    transition: 'width 200ms ease',
-    
-    [theme.fn.smallerThan('sm')]: {
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 'auto',
-      width: '100%',
-      zIndex: 100,
-      borderTop: `1px solid ${theme.colors.gray[2]}`,
-    },
+    height: '100vh'
   },
 
   navItem: {
@@ -78,17 +67,12 @@ const useStyles = createStyles((theme) => ({
   },
 
   mobileNav: {
-    [theme.fn.smallerThan('sm')]: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-    }
+    display: 'flex',
+    flexDirection: 'column'
   },
 
   divider: {
-    margin: `${theme.spacing.md}px 0`,
-    [theme.fn.smallerThan('sm')]: {
-      display: 'none',
-    }
+    marginBottom: theme.spacing.xs
   }
 }));
 
@@ -98,10 +82,10 @@ const Navigation = () => {
 
   const navigationItems = [
     { id: 'dashboard', icon: IconHome, label: 'Home', to: '/dashboard' },
-    { id: 'patients', icon: IconUsers, label: 'Patients', to: '/patients' },
+    { id: 'patients', icon: IconUsers, label: 'My Patients', to: '/patients' },
     { id: 'performance', icon: IconChartBar, label: 'Performance', to: '/performance' },
     { id: 'ehr-alerts', icon: IconDatabase, label: 'EHR Alerts', to: '/ehr-alerts' },
-    { id: 'context', icon: IconHistory, label: 'Context History', to: '/patient-context' },
+    { id: 'admin', icon: IconHistory, label: 'Admin', to: '/patient-context' },
   ];
 
   const settingsItem = {
@@ -161,22 +145,27 @@ const Navigation = () => {
 
   return (
     <Navbar p="md" className={classes.navbar} width={{ base: 250 }}>
-      <Stack spacing="xs" className={classes.mobileNav}>
-        <AnimatePresence mode="wait">
-          {navigationItems.map((item, index) => (
-            <NavItem 
-              key={item.id} 
-              {...item} 
-              index={index}
-            />
-          ))}
-          <Divider key="divider" className={classes.divider} />
+      <Stack spacing="xs" className={classes.mobileNav} sx={{ height: '100%' }}>
+        <Box sx={{ flex: 1 }}>
+          <AnimatePresence mode="sync">
+            {navigationItems.map((item, index) => (
+              <NavItem 
+                key={item.id} 
+                {...item} 
+                index={index}
+              />
+            ))}
+          </AnimatePresence>
+        </Box>
+
+        <Box>
+          <Divider className={classes.divider} />
           <NavItem 
             key={settingsItem.id} 
             {...settingsItem} 
             index={navigationItems.length}
           />
-        </AnimatePresence>
+        </Box>
       </Stack>
     </Navbar>
   );

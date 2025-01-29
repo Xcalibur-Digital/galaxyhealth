@@ -1,4 +1,6 @@
-import admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -29,29 +31,21 @@ if (missingEnvVars.length > 0) {
 const serviceAccountPath = path.resolve(__dirname, './serviceAccount.json');
 const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
 
-// Initialize Firebase Admin if it hasn't been initialized yet
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    console.log('Firebase Admin initialized successfully');
-  } catch (error) {
-    console.error('Firebase Admin initialization error:', error);
-    throw error;
-  }
-}
-
-// Export the services we need
-export const db = admin.firestore();
-export const auth = admin.auth();
-export default admin;
-
+// Extract config from service account
 export const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID
-}; 
+  apiKey: serviceAccount.api_key,
+  authDomain: `${serviceAccount.project_id}.firebaseapp.com`,
+  projectId: serviceAccount.project_id,
+  storageBucket: `${serviceAccount.project_id}.appspot.com`,
+  messagingSenderId: serviceAccount.client_id,
+  appId: serviceAccount.app_id || process.env.FIREBASE_APP_ID // Fallback to env if not in service account
+};
+
+// Initialize Firebase Admin
+const app = initializeApp({
+  credential: cert(serviceAccount),
+  ...firebaseConfig
+});
+
+export const db = getFirestore(app);
+export const auth = getAuth(app); 

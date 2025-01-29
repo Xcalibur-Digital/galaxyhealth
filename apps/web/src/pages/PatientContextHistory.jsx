@@ -20,12 +20,17 @@ import {
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../stores/notificationStore';
+import { auth } from '../firebase';
 
 const PatientContextHistory = () => {
   const navigate = useNavigate();
-  const { notifications, clearNotifications } = useNotificationStore();
+  const { notifications, loading, error } = useNotificationStore(state => ({
+    notifications: state.notifications,
+    loading: state.loading,
+    error: state.error
+  }));
   
-  console.log('Current notifications:', notifications); // Debug log
+  console.log('PatientContextHistory render:', { notifications, loading, error });
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
@@ -51,7 +56,12 @@ const PatientContextHistory = () => {
   };
 
   // Add debug button for development
-  const addTestNotification = () => {
+  const addTestNotification = async () => {
+    if (!auth.currentUser) {
+      console.error('Must be logged in to add notifications');
+      return;
+    }
+
     const testNotification = {
       type: 'PATIENT_CONTEXT',
       title: 'Test Patient Context',
@@ -65,7 +75,7 @@ const PatientContextHistory = () => {
       source: 'browser',
       appName: 'Test Browser'
     };
-    useNotificationStore.getState().addNotification(testNotification);
+    await useNotificationStore.getState().addNotification(testNotification);
   };
 
   return (
@@ -133,7 +143,7 @@ const PatientContextHistory = () => {
                       <Menu.Item 
                         icon={<IconTrash size={16} />}
                         color="red"
-                        onClick={() => clearNotifications()}
+                        onClick={() => useNotificationStore.getState().clearNotifications()}
                       >
                         Clear History
                       </Menu.Item>

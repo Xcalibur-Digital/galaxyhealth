@@ -322,8 +322,14 @@ export const searchFHIRPatients = async () => {
 
 export const getFHIRPatient = async (id) => {
   try {
+    console.log('Fetching patient:', id);
     const token = await getAuthToken();
-    const response = await fetch(`${fhirConfig.baseUrl}/fhir/Patient/${id}`, {
+    
+    // Fix the URL construction
+    const url = `${import.meta.env.VITE_API_URL}/fhir/Patient/${id}`;
+    console.log('Making request to:', url);
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -332,10 +338,18 @@ export const getFHIRPatient = async (id) => {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('FHIR API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
       throw new Error('Failed to fetch patient');
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('Received patient data:', data);
+    return data;
   } catch (error) {
     console.error('Error fetching FHIR patient:', error);
     throw error;

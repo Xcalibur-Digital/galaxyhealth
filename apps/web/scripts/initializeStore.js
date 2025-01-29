@@ -1,6 +1,44 @@
 import { db } from '../src/config/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
+
+const recommendations = [
+  {
+    title: "Schedule AWVs for High-Risk Patients",
+    description: "10 patients with multiple chronic conditions haven't had an AWV in the last 12 months",
+    priority: "high",
+    impact: "$2,500 potential revenue",
+    action: "View Patient List",
+    icon: "calendar",
+    type: "awv",
+    status: "active",
+    dueDate: "2024-03-15",
+    category: "preventive"
+  },
+  {
+    title: "Review HCC Recapture Opportunities",
+    description: "15 patients have suspected HCC conditions requiring documentation",
+    priority: "high",
+    impact: "$3,750 RAF adjustment opportunity",
+    action: "Review HCC Gaps",
+    icon: "report-medical",
+    type: "hcc",
+    status: "active",
+    dueDate: "2024-03-10",
+    category: "risk"
+  },
+  // ... add more recommendations
+];
+
+const metrics = {
+  vbcScore: 85,
+  trends: {
+    awvCompletion: 78,
+    careGapClosure: 82,
+    riskAdjustment: 91
+  }
+};
+
 const initialCohorts = [
   {
     name: 'Diabetes',

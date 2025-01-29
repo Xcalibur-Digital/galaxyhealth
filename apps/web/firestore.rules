@@ -11,15 +11,28 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return request.auth != null && 
+        request.auth.token.email == 'brendansmithelion@gmail.com';
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     // Allow read access to cohort metrics for any authenticated user
     match /cohortMetrics/{cohortId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAdmin();
       
       // Allow access to recommendations subcollection
       match /recommendations/{recommendationId} {
         allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        allow write: if isAdmin();
       }
     }
 
@@ -40,6 +53,102 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
         (request.auth.uid == userId || isUserAuthorized());
       allow write: if request.auth.uid == userId;
+    }
+
+    // User settings
+    match /userSettings/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
+      allow write: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
+    }
+
+    // User preferences
+    match /userPreferences/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
+      allow write: if isSignedIn() && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
+    }
+
+    // Notifications collection rules
+    match /notifications/{notificationId} {
+      allow create: if isSignedIn() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      allow read, write, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Allow querying notifications
+      allow list: if isSignedIn() && 
+        request.query.limit <= 100 &&
+        request.query.orderBy == "timestamp" &&
+        request.query.where.userId == request.auth.uid;
+    }
+
+    // Recommendations collection
+    match /recommendations/{recommendationId} {
+      allow read: if isSignedIn();
+      // Allow initialization and updates by admin
+      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
+      
+      // Allow listing with query constraints
+      allow list: if isSignedIn();
+    }
+
+    // Metrics collection
+    match /metrics/{metricId} {
+      allow read: if isSignedIn();
+      // Allow initialization and updates by admin
+      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Patients collection
+    match /patients/{patientId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || 
+        (isAuthenticated() && 
+         request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['lastVisit', 'careGaps', 'notes']));
+      allow delete: if isAdmin();
+      
+      // Allow querying with constraints
+      allow list: if isAuthenticated() && 
+        request.query.limit <= 1000;
+    }
+
+    // Patient care gaps subcollection
+    match /patients/{patientId}/careGaps/{gapId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+        (request.auth.uid == resource.data.assignedTo || isAdmin());
+    }
+
+    // Patient notes subcollection
+    match /patients/{patientId}/notes/{noteId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (request.auth.uid == resource.data.createdBy || isAdmin());
+    }
+
+    // Batch operations should be allowed for admin operations
+    match /{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 } 

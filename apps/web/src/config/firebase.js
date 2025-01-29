@@ -1,54 +1,29 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { firebaseConfig } from './firebase.config.js';
 
-// Add more detailed logging
-console.log('Firebase Config:', {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
-});
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
-
-// Only log non-sensitive config info
-console.log('Firebase config:', {
-  ...firebaseConfig,
-  apiKey: 'HIDDEN'
-});
-
-console.log('Initializing Firebase with config:', firebaseConfig);
+// Initialize Firebase first
 const app = initializeApp(firebaseConfig);
-console.log('Firebase initialized successfully');
-
-// Initialize services
 const db = getFirestore(app);
 const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
-// Add auth state change listener
-auth.onAuthStateChanged((user) => {
-  console.log('Auth state changed:', user ? 'User is signed in' : 'User is signed out');
-});
+// Debug logging after initialization
+if (import.meta.env.DEV) {
+  console.log('Firebase config:', {
+    ...firebaseConfig,
+    apiKey: 'HIDDEN'
+  });
+  
+  window.firebase = { firestore: db };
+}
 
-// Get auth token function
-const getAuthToken = async () => {
+// Exports after everything is initialized
+export { db, auth, googleProvider };
+export const getAuthToken = async () => {
   const user = auth.currentUser;
-  if (!user) {
-    throw new Error('No user is signed in');
-  }
+  if (!user) throw new Error('No user is signed in');
   return user.getIdToken();
 };
-
-// Export everything
-export { auth, db, getAuthToken };
 export default app; 

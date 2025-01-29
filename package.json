@@ -19,6 +19,7 @@
     "@mantine/notifications": "^6.0.21",
     "@tabler/icons-react": "^2.47.0",
     "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
     "express-rate-limit": "^7.5.0",
     "express-slow-down": "^2.0.3",
     "firebase-admin": "^13.0.2",

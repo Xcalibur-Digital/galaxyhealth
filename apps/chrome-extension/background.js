@@ -2,6 +2,7 @@ import { searchFHIRPatient } from './fhirService.js';
 import ScreenCaptureService from './services/screenCapture.js';
 import OCRService from './services/ocrService.js';
 import notificationHistoryService from './services/notificationHistoryService.js';
+import StorageService from './services/storageService.js';
 
 // Keep track of current patient context
 let currentPatientContext = null;
@@ -31,14 +32,14 @@ const showDesktopNotification = async (patient, context = {}) => {
       name: patient.name[0],
       mrn: patient.identifier?.[0]?.value
     },
-    source: context.source || 'screen-capture',
-    matchConfidence: context.confidence || 1.0,
-    rawText: context.rawText || '',
-    screenRegion: context.screenRegion || null
+    source: context.source || 'browser',
+    appName: context.appName || document.title || window.location.hostname,
+    timestamp: new Date().toISOString(),
+    read: false
   };
 
-  // Add to history before showing
-  await notificationHistoryService.addToHistory(notificationData);
+  // Add to notification store
+  await StorageService.addNotification(notificationData);
 
   // Show notifications
   const options = {

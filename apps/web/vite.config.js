@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -21,7 +22,8 @@ export default defineConfig({
     alias: {
       '@': '/src',
       '@mantine/core': '@mantine/core/esm',
-      '@mantine/hooks': '@mantine/hooks/esm'
+      '@mantine/hooks': '@mantine/hooks/esm',
+      '@galaxy/shared': path.resolve(__dirname, '../shared'),
     }
   }
 }); 

@@ -13,7 +13,9 @@ import {
   Modal,
   TextInput,
   Textarea,
-  Divider
+  Divider,
+  ThemeIcon,
+  List
 } from '@mantine/core';
 import { 
   IconAlertCircle, 

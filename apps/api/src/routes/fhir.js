@@ -165,8 +165,38 @@ const speedLimiter = slowDown({
 router.use(limiter);
 router.use(speedLimiter);
 
-// Get recent patients with related resources
-router.get('/Patient', async (req, res) => {
+// Get single patient by ID
+router.get('/Patient/:id', verifyAuthToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Fetching patient:', id);
+
+    const client = await createAuthenticatedClient();
+    const response = await client.get(`/Patient/${id}`);
+
+    if (!response.data) {
+      return res.status(404).json({
+        error: {
+          message: 'Patient not found'
+        }
+      });
+    }
+
+    console.log('Found patient:', response.data);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching patient:', error);
+    res.status(500).json({
+      error: {
+        message: 'Failed to fetch patient',
+        details: error.message
+      }
+    });
+  }
+});
+
+// Existing search patients endpoint
+router.get('/Patient', verifyAuthToken, async (req, res) => {
   try {
     const client = await createAuthenticatedClient();
     const response = await client.get('/Patient');

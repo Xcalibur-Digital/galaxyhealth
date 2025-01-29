@@ -13,13 +13,24 @@
   height: 100%;
   display: flex;
   align-items: center;
+  padding: 0;
 }
 
 /* Light mode styles */
 [data-mantine-color-scheme="light"] .animated-header {
-  border-bottom: 1px solid var(--mantine-color-gray-3);
+  border-bottom-color: var(--mantine-color-gray-3);
 }
 
+[data-mantine-color-scheme="dark"] .animated-header {
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+.header-content {
+  color: inherit;
+  font-weight: 700;
+}
+
+/* Light mode styles */
 [data-mantine-color-scheme="light"] .header-content {
   color: white;
   font-weight: 700;
@@ -27,14 +38,10 @@
 }
 
 [data-mantine-color-scheme="light"] .arcadia-logo {
-  filter: brightness(1);
+  filter: brightness(0) invert(1);
 }
 
 /* Dark mode styles */
-[data-mantine-color-scheme="dark"] .animated-header {
-  border-bottom-color: var(--mantine-color-dark-4);
-}
-
 [data-mantine-color-scheme="dark"] .header-content {
   color: white;
   font-weight: 700;
@@ -63,9 +70,19 @@
 
 /* Logo styles */
 .arcadia-logo {
-  height: 24px;
-  filter: brightness(1);
+  height: 32px;
+  width: auto;
   transition: opacity 0.3s ease;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+[data-mantine-color-scheme="light"] .arcadia-logo {
+  filter: brightness(0) invert(1);
+}
+
+[data-mantine-color-scheme="dark"] .arcadia-logo {
+  /* No filter needed for dark mode as we're using the white logo */
 }
 
 .arcadia-logo:hover {
