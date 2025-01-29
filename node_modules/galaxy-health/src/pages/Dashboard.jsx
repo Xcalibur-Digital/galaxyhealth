@@ -76,16 +76,18 @@ const Dashboard = () => {
   ];
 
   return (
-    <Box py="md" px="0">
-      <Title order={1} mb="lg" pl="md" color="dark.9">
-        Welcome, {firstName}
-      </Title>
-      
-      {activePatient && (
-        <Box mb="lg">
-          <PatientAlert patient={activePatient} />
-        </Box>
-      )}
+    <Container size="xl" py="xl">
+      <Box pb="xl">
+        <Title order={1} mb="lg" pl="md" color="dark.9">
+          Welcome, {firstName}
+        </Title>
+        
+        {activePatient && (
+          <Box mb="lg">
+            <PatientAlert patient={activePatient} />
+          </Box>
+        )}
+      </Box>
       
       <Grid>
         {highlights.map((highlight, index) => (
@@ -99,7 +101,7 @@ const Dashboard = () => {
       </Grid>
 
       <NarrativeSummary />
-    </Box>
+    </Container>
   );
 };
 

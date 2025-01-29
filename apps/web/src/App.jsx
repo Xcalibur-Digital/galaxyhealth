@@ -26,6 +26,7 @@ import PatientDetails from './components/patients/PatientDetails';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-material.css';
 import { Header as CustomHeader } from './components/layout/Header';
+import './styles/global.css';
 
 const useStyles = createStyles((theme) => ({
   appShell: {
@@ -192,8 +193,18 @@ const router = createBrowserRouter([
 const App = () => {
   return (
     <ThemeProvider>
-      <Notifications position="top-right" />
-      <RouterProvider router={router} />
+      <MantineProvider
+        withGlobalStyles
+        withNormalizeCSS
+        theme={{
+          colorScheme: 'light',
+          primaryColor: 'blue',
+          // ... other theme options
+        }}
+      >
+        <Notifications position="top-right" />
+        <RouterProvider router={router} />
+      </MantineProvider>
     </ThemeProvider>
   );
 };
