@@ -12,6 +12,10 @@
     "setup-env": "node apps/scripts/setup-env.js"
   },
   "dependencies": {
+    "@ag-grid-enterprise/column-tool-panel": "^32.3.3",
+    "@ag-grid-enterprise/core": "^32.3.3",
+    "@ag-grid-enterprise/menu": "^32.3.3",
+    "@ag-grid-enterprise/set-filter": "^32.3.3",
     "@emotion/react": "^11.11.1",
     "@mantine/core": "^6.0.21",
     "@mantine/dropzone": "^6.0.21",

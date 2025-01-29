@@ -1,246 +1,346 @@
-import { useState, useEffect } from 'react';
-import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '@galaxy/shared/config/firebase';
-import { useUser } from '../../contexts/UserContext';
-import { Box, Text, Loader, Paper, useMantineTheme, useMantineColorScheme } from '@mantine/core';
-import { AgGridReact } from 'ag-grid-react';
+import { ModuleRegistry } from '@ag-grid-community/core';
+import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
+import { SetFilterModule } from '@ag-grid-enterprise/set-filter';
+import { MenuModule } from '@ag-grid-enterprise/menu';
+import { ColumnsToolPanelModule } from '@ag-grid-enterprise/column-tool-panel';
+import { SideBarModule } from '@ag-grid-enterprise/side-bar';
 
-// Updated AG Grid style imports
-import 'ag-grid-community/styles/ag-grid.min.css';
-import 'ag-grid-community/styles/ag-theme-material.min.css';
+// Register AG Grid Modules
+ModuleRegistry.registerModules([
+  ClientSideRowModelModule,
+  SetFilterModule,
+  MenuModule,
+  ColumnsToolPanelModule,
+  SideBarModule
+]);
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Group, Box, Text, Paper, Button, Menu, ActionIcon, Loader } from '@mantine/core';
+import { AgGridReact } from 'ag-grid-react';
+import { IconFilter, IconColumns, IconEye } from '@tabler/icons-react';
+import { usePatient } from '../../contexts/PatientContext';
+import { saveGridState, loadGridState } from '../../utils/gridUtils';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { SAVED_VIEWS, getFilterModelForView } from '../../utils/gridViews';
+
+// Add this CSS to your global styles or component
+const gridStyles = {
+  '.ag-theme-material': {
+    '--ag-font-family': 'var(--mantine-font-family)',
+    '--ag-font-size': '14px',
+    '--ag-header-height': '48px',
+    '--ag-header-background-color': 'var(--mantine-color-gray-0)',
+    '--ag-header-foreground-color': 'var(--mantine-color-dark-9)',
+    '--ag-header-column-separator-display': 'block',
+    '--ag-header-column-separator-color': 'var(--mantine-color-gray-3)',
+    '--ag-row-hover-color': 'var(--mantine-color-gray-0)',
+    '--ag-selected-row-background-color': 'var(--mantine-color-blue-0)',
+    '--ag-odd-row-background-color': 'transparent',
+    '--ag-row-border-color': 'var(--mantine-color-gray-2)',
+    '--ag-cell-horizontal-padding': '16px',
+    '--ag-borders': 'none',
+    'border': '1px solid var(--mantine-color-gray-3)',
+    'borderRadius': 'var(--mantine-radius-md)',
+  },
+  '.ag-theme-material .ag-header-cell': {
+    fontWeight: 600,
+  },
+  '.ag-theme-material .ag-header-cell-text': {
+    color: 'var(--mantine-color-dark-9)',
+  },
+  '.ag-theme-material .ag-cell': {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  '.ag-theme-material .ag-row': {
+    borderBottom: '1px solid var(--mantine-color-gray-2)',
+    cursor: 'pointer',
+  },
+  '.ag-theme-material .ag-row-selected': {
+    backgroundColor: 'var(--mantine-color-blue-0)',
+  }
+};
 
 export default function PatientList() {
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { user } = useUser();
-  const theme = useMantineTheme();
-  const { colorScheme } = useMantineColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { patients, loading: patientsLoading } = usePatient();
+  const gridRef = useRef(null);
+  const [rowData, setRowData] = useState([]);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const viewId = searchParams.get('view');
+  const initialFilterApplied = useRef(false);
 
-  // Custom AG Grid theme to match Mantine
-  const gridTheme = {
-    '--ag-font-family': theme.fontFamily,
-    '--ag-font-size': '14px',
-    '--ag-background-color': isDark ? theme.colors.dark[7] : theme.white,
-    '--ag-header-background-color': isDark ? theme.colors.dark[8] : theme.colors.gray[0],
-    '--ag-odd-row-background-color': isDark ? theme.colors.dark[6] : theme.colors.gray[0],
-    '--ag-row-hover-color': isDark ? theme.colors.dark[5] : theme.colors.gray[1],
-    '--ag-selected-row-background-color': isDark ? theme.colors.blue[9] : theme.colors.blue[1],
-    '--ag-header-foreground-color': isDark ? theme.colors.gray[4] : theme.colors.gray[7],
-    '--ag-foreground-color': isDark ? theme.white : theme.colors.dark[9],
-    '--ag-border-color': isDark ? theme.colors.dark[4] : theme.colors.gray[3],
-    '--ag-row-border-color': isDark ? theme.colors.dark[4] : theme.colors.gray[3],
-    '--ag-cell-horizontal-padding': theme.spacing.sm,
-    '--ag-header-column-separator-display': 'block',
-    '--ag-header-column-separator-color': isDark ? theme.colors.dark[4] : theme.colors.gray[3],
-    '--ag-header-column-separator-height': '100%',
-    '--ag-header-column-resize-handle-color': theme.colors.blue[5],
-    '--ag-input-border-color': isDark ? theme.colors.dark[4] : theme.colors.gray[4],
-    '--ag-input-background-color': isDark ? theme.colors.dark[6] : theme.white,
-    '--ag-input-focus-box-shadow': `0 0 2px ${theme.colors.blue[5]}`,
-    '--ag-range-selection-border-color': theme.colors.blue[5],
-    '--ag-range-selection-background-color': isDark ? 
-      theme.fn.rgba(theme.colors.blue[9], 0.2) : 
-      theme.fn.rgba(theme.colors.blue[1], 0.2),
-    '--ag-scrollbar-background': 'transparent',
-    '--ag-scrollbar-thumb-color': isDark ? theme.colors.dark[3] : theme.colors.gray[3],
-    '--ag-scrollbar-track-color': 'transparent',
-    '--ag-borders': 'none',
-    '--ag-row-border-style': 'solid',
-    '--ag-row-border-width': '1px',
-    '--ag-border-radius': theme.radius.sm,
-    '--ag-grid-size': '6px',
-    '--ag-list-item-height': '40px',
-  };
+  // Debug logs
+  console.log('PatientList render:', { patients, patientsLoading, rowData });
 
-  // Column Definitions
-  const columnDefs = [
+  useEffect(() => {
+    if (patients?.length) {
+      console.log('Raw patients data:', patients);
+      const formattedData = patients.map(patient => ({
+        name: `${patient.firstName} ${patient.lastName}`,
+        age: patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : '',
+        riskLevel: patient.riskLevel || 'low',
+        lastVisit: patient.lastVisit || '',
+        careGaps: patient.careGaps?.length || 0,
+        provider: patient.provider || '',
+        id: patient.id
+      }));
+      console.log('Formatted grid data:', formattedData);
+      setRowData(formattedData);
+    } else {
+      console.log('No patients data available:', patients);
+    }
+  }, [patients]);
+
+  const [columnDefs] = useState([
     { 
-      field: 'name',
+      field: 'name', 
       headerName: 'Patient Name',
-      valueGetter: (params) => 
-        `${params.data.firstName || ''} ${params.data.lastName || ''}`,
-      sortable: true,
       filter: true,
-      flex: 1,
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
+      flex: 2,
+      minWidth: 200,
       cellStyle: { fontWeight: 500 }
     },
     { 
-      field: 'dateOfBirth', 
-      headerName: 'Date of Birth',
-      sortable: true,
-      filter: true,
-      width: 130
+      field: 'age', 
+      headerName: 'Age',
+      filter: 'agNumberColumnFilter',
+      width: 100,
+      type: 'numericColumn',
+      cellStyle: { justifyContent: 'center' }
     },
     { 
-      field: 'gender',
-      sortable: true,
-      filter: true,
-      width: 120
-    },
-    { 
-      field: 'contact',
-      valueGetter: (params) => 
-        params.data.phone || params.data.email || 'N/A',
-      sortable: true,
-      filter: true,
-      flex: 1
-    },
-    { 
-      field: 'lastVisit',
-      headerName: 'Last Visit',
-      valueFormatter: (params) => 
-        params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
-      sortable: true,
-      filter: true,
-      width: 130
-    },
-    {
-      field: 'riskLevel',
+      field: 'riskLevel', 
       headerName: 'Risk Level',
-      cellRenderer: (params) => {
-        const colors = {
-          high: isDark ? theme.colors.red[6] : theme.colors.red[7],
-          medium: isDark ? theme.colors.yellow[6] : theme.colors.yellow[7],
-          low: isDark ? theme.colors.green[6] : theme.colors.green[7]
-        };
-        const bgColors = {
-          high: isDark ? theme.fn.rgba(theme.colors.red[9], 0.2) : theme.fn.rgba(theme.colors.red[0], 0.5),
-          medium: isDark ? theme.fn.rgba(theme.colors.yellow[9], 0.2) : theme.fn.rgba(theme.colors.yellow[0], 0.5),
-          low: isDark ? theme.fn.rgba(theme.colors.green[9], 0.2) : theme.fn.rgba(theme.colors.green[0], 0.5)
-        };
-        const color = colors[params.value?.toLowerCase()] || theme.colors.gray[5];
-        const bgColor = bgColors[params.value?.toLowerCase()] || theme.fn.rgba(theme.colors.gray[5], 0.1);
-        return `<div style="
-          color: ${color}; 
-          font-weight: 500;
-          padding: 4px 8px;
-          border-radius: 4px;
-          background: ${bgColor};
-          display: inline-block;
-        ">${params.value || 'Unknown'}</div>`;
-      },
-      sortable: true,
       filter: true,
+      cellRenderer: RiskLevelRenderer,
       width: 130,
-      cellStyle: { display: 'flex', alignItems: 'center' }
+      cellStyle: { display: 'flex', alignItems: 'center' },
+      filterParams: {
+        values: ['low', 'medium', 'high']
+      }
+    },
+    { 
+      field: 'lastVisit', 
+      headerName: 'Last Visit',
+      filter: 'agDateColumnFilter',
+      width: 150,
+      valueFormatter: params => 
+        params.value ? new Date(params.value).toLocaleDateString() : ''
+    },
+    { 
+      field: 'careGaps', 
+      headerName: 'Care Gaps',
+      filter: 'agNumberColumnFilter',
+      width: 120,
+      type: 'numericColumn',
+      cellStyle: params => ({
+        color: params.value > 0 ? '#fa5252' : 'inherit',
+        fontWeight: params.value > 0 ? 500 : 400,
+        justifyContent: 'center'
+      })
+    },
+    { 
+      field: 'provider', 
+      headerName: 'Provider',
+      filter: true,
+      flex: 1,
+      minWidth: 150
     }
-  ];
+  ]);
 
-  // Default Column Definition
-  const defaultColDef = {
+  const defaultColDef = useMemo(() => ({
+    sortable: true,
     resizable: true,
-    minWidth: 100,
-    flex: 1,
-    suppressSizeToFit: false,
-    filter: 'agTextColumnFilter',
-    filterParams: {
-      buttons: ['reset', 'apply'],
-      closeOnApply: true
+    filter: true,
+    floatingFilter: true,
+    suppressMovable: true,
+    suppressMenu: true
+  }), []);
+
+  const onGridReady = useCallback((params) => {
+    console.log('Grid ready:', params);
+    const savedState = loadGridState('patientsGrid');
+    if (savedState) {
+      gridRef.current.columnApi.applyColumnState({ state: savedState });
     }
+    
+    // Apply initial filter if view parameter exists
+    if (viewId && !initialFilterApplied.current) {
+      const filterModel = getFilterModelForView(viewId);
+      params.api.setFilterModel(filterModel);
+      initialFilterApplied.current = true;
+    }
+    
+    params.api.sizeColumnsToFit();
+  }, [viewId]);
+
+  const saveCurrentView = () => {
+    const columnState = gridRef.current.columnApi.getColumnState();
+    saveGridState('patientsGrid', columnState);
   };
 
-  useEffect(() => {
-    async function fetchPatients() {
-      try {
-        setLoading(true);
-        const patientsRef = collection(db, 'patients');
-        const q = query(
-          patientsRef,
-          orderBy('lastName'),
-          limit(100)
-        );
-
-        const querySnapshot = await getDocs(q);
-        const patientsList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        setPatients(patientsList);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching patients:', err);
-        setError('Failed to load patients');
-      } finally {
-        setLoading(false);
-      }
+  const applyPresetFilter = useCallback((preset) => {
+    if (gridRef.current?.api) {
+      const filterModel = getFilterModelForView(preset);
+      gridRef.current.api.setFilterModel(filterModel);
     }
+  }, []);
 
-    if (user) {
-      fetchPatients();
-    }
-  }, [user]);
+  const onRowClicked = useCallback((event) => {
+    navigate(`/patients/${event.data.id}`);
+  }, [navigate]);
 
-  if (loading) {
+  if (patientsLoading) {
     return (
-      <Box sx={{ textAlign: 'center' }} py={10}>
-        <Loader size="xl" />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ textAlign: 'center' }} p={4}>
-        <Text color="red">{error}</Text>
-      </Box>
+      <Paper p="md" radius="md" style={{ height: 'calc(100vh - 180px)' }}>
+        <Group position="center" style={{ height: '100%' }}>
+          <Loader size="xl" />
+        </Group>
+      </Paper>
     );
   }
 
   return (
-    <Paper p="md" radius="md" style={{ height: 'calc(100vh - 180px)' }}>
-      <div 
-        className="ag-theme-material"
-        style={{ 
+    <Paper p="xl" radius="md" style={{ height: 'calc(100vh - 180px)' }}>
+      <Group position="apart" mb="xl">
+        <Text size="xl" weight={700} color="dark.9">
+          Patient List ({rowData.length})
+        </Text>
+        <Group spacing="sm">
+          <Menu position="bottom-end" shadow="md">
+            <Menu.Target>
+              <Button 
+                variant="light" 
+                leftIcon={<IconFilter size={16} />}
+                size="sm"
+              >
+                Filters
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Preset Filters</Menu.Label>
+              <Menu.Item onClick={() => applyPresetFilter('highRisk')}>
+                High Risk Patients
+              </Menu.Item>
+              <Menu.Item onClick={() => applyPresetFilter('recentVisits')}>
+                Recent Visits
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+
+          <Button 
+            variant="light"
+            leftIcon={<IconColumns size={16} />}
+            onClick={() => gridRef.current.api.showToolPanel()}
+            size="sm"
+          >
+            Columns
+          </Button>
+          
+          <Button 
+            variant="subtle" 
+            onClick={saveCurrentView}
+            size="sm"
+          >
+            Save View
+          </Button>
+        </Group>
+      </Group>
+
+      <Box 
+        className="ag-theme-material" 
+        sx={{
+          height: 'calc(100% - 60px)',
           width: '100%',
-          height: '100%',
-          ...gridTheme
+          ...gridStyles
         }}
       >
         <AgGridReact
-          rowData={patients}
+          ref={gridRef}
+          rowData={rowData}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
-          animateRows={true}
-          rowSelection="single"
-          pagination={true}
-          paginationPageSize={20}
-          enableCellTextSelection={true}
-          suppressRowClickSelection={true}
-          onGridReady={(params) => {
-            params.api.sizeColumnsToFit();
-            window.addEventListener('resize', () => {
-              setTimeout(() => {
-                params.api.sizeColumnsToFit();
-              });
-            });
+          rowSelection="multiple"
+          suppressRowClickSelection={false}
+          onGridReady={onGridReady}
+          onRowClicked={onRowClicked}
+          sideBar={{
+            toolPanels: ['columns'],
+            defaultToolPanel: ''
           }}
-          onFirstDataRendered={(params) => {
-            params.api.sizeColumnsToFit();
-          }}
-          domLayout="autoHeight"
-          suppressHorizontalScroll={true}
-          suppressScrollOnNewData={true}
-          overlayNoRowsTemplate={
-            `<div style="text-align: center; color: ${isDark ? theme.colors.gray[4] : theme.colors.gray[6]}">
-              No patients found
-            </div>`
-          }
-          loadingOverlayComponent={
-            `<div style="text-align: center; color: ${isDark ? theme.colors.gray[4] : theme.colors.gray[6]}">
-              Loading patients...
-            </div>`
-          }
+          domLayout='autoHeight'
+          enableBrowserTooltips={true}
           rowHeight={48}
           headerHeight={48}
-          suppressMovableColumns={true}
+          pagination={true}
+          paginationPageSize={20}
+          animateRows={true}
           suppressCellFocus={true}
-          tooltipShowDelay={0}
-          tooltipHideDelay={2000}
         />
-      </div>
+      </Box>
     </Paper>
   );
-} 
+}
+
+// Helper function to calculate age
+function calculateAge(dateOfBirth) {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+// Update the RiskLevelRenderer component
+const RiskLevelRenderer = ({ value }) => {
+  const getStyle = () => {
+    switch(value?.toLowerCase()) {
+      case 'high':
+        return {
+          backgroundColor: '#ff6b6b',
+          color: 'white',
+          border: '1px solid #fa5252'
+        };
+      case 'medium':
+        return {
+          backgroundColor: '#ffd43b',
+          color: '#212529',
+          border: '1px solid #fab005'
+        };
+      case 'low':
+        return {
+          backgroundColor: '#51cf66',
+          color: 'white',
+          border: '1px solid #40c057'
+        };
+      default:
+        return {
+          backgroundColor: '#868e96',
+          color: 'white',
+          border: '1px solid #495057'
+        };
+    }
+  };
+
+  return value ? (
+    <Box
+      sx={(theme) => ({
+        ...getStyle(),
+        padding: '4px 12px',
+        borderRadius: theme.radius.sm,
+        fontSize: theme.fontSizes.sm,
+        fontWeight: 500,
+        display: 'inline-block',
+        textTransform: 'capitalize'
+      })}
+    >
+      {value}
+    </Box>
+  ) : null;
+}; 

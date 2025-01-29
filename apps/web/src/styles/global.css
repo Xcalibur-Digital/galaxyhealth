@@ -77,4 +77,21 @@ p, li {
 
 code, pre {
   font-family: var(--font-mono);
+}
+
+.ag-theme-material {
+  --ag-font-family: var(--mantine-font-family);
+  --ag-font-size: 14px;
+  --ag-selected-row-background-color: var(--mantine-color-blue-0);
+  --ag-row-hover-color: var(--mantine-color-gray-0);
+  --ag-header-background-color: var(--mantine-color-gray-0);
+  --ag-odd-row-background-color: var(--mantine-color-gray-0);
+}
+
+.ag-theme-material .ag-header-cell {
+  font-weight: 600;
+}
+
+.ag-theme-material .ag-row {
+  border-bottom: 1px solid var(--mantine-color-gray-2);
 } 

@@ -3,6 +3,8 @@ import { showNotification } from '@mantine/notifications';
 import { IconUserCheck } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../stores/notificationStore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 const PatientContext = createContext(null);
 
@@ -10,6 +12,9 @@ export const PatientProvider = ({ children }) => {
   const [activePatient, setActivePatient] = useState(null);
   const navigate = useNavigate();
   const addNotification = useNotificationStore(state => state.addNotification);
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   useEffect(() => {
     console.log('Setting up patient context listener');
@@ -69,8 +74,55 @@ export const PatientProvider = ({ children }) => {
     };
   }, [navigate, addNotification]);
 
+  const fetchPatients = async () => {
+    try {
+      const patientsRef = collection(db, 'patients');
+      const q = query(patientsRef, orderBy('lastName', 'asc'));
+      const querySnapshot = await getDocs(q);
+      
+      const patients = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        patients.push({
+          id: doc.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          dateOfBirth: data.dateOfBirth,
+          riskLevel: data.riskLevel || 'low',
+          lastVisit: data.lastVisit,
+          careGaps: data.careGaps || [],
+          provider: data.provider || '',
+          // Add other fields as needed
+        });
+      });
+      
+      return patients;
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      setLoading(true);
+      try {
+        const patientsData = await fetchPatients();
+        console.log('Loaded patients:', patientsData);
+        setPatients(patientsData);
+      } catch (error) {
+        console.error('Error loading patients:', error);
+        setError(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPatients();
+  }, []);
+
   return (
-    <PatientContext.Provider value={{ activePatient, setActivePatient }}>
+    <PatientContext.Provider value={{ activePatient, setActivePatient, patients, loading, error }}>
       {children}
     </PatientContext.Provider>
   );

@@ -23,6 +23,9 @@ import { AnimatePresence } from 'framer-motion';
 import PageTransition from './components/transitions/PageTransition';
 import useNotificationStore from './stores/notificationStore';
 import PatientDetails from './components/patients/PatientDetails';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-material.css';
+import { Header as CustomHeader } from './components/layout/Header';
 
 const useStyles = createStyles((theme) => ({
   appShell: {
@@ -68,29 +71,10 @@ const AppLayout = () => {
     <AppShell
       padding="md"
       navbar={<Navigation />}
-      header={
-        <Header height={60}>
-          <Box className="animated-header">
-            <Group position="apart" px="md" h="100%" w="100%">
-            
-              <Group spacing="xs" align="left" ml="0">
-                <img 
-                  src="/arcadia-logo.svg" 
-                  alt="Arcadia.io" 
-                  style={{ height: 24 }}
-                  className="arcadia-logo"
-                />
-             
-              </Group>
-              <Text size="xl" weight={700} className="header-content">
-                Galaxy Health
-              </Text>
-              <NotificationCenter />
-            </Group>
-          </Box>
-        </Header>
-      }
-      classNames={classes.appShell}
+      header={<CustomHeader />}
+      classNames={{
+        main: classes.appShell.main,
+      }}
     >
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
@@ -151,7 +135,7 @@ const AppLayout = () => {
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: "/*",
     element: (
       <UserProvider>
         <PatientProvider>
