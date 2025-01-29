@@ -19,6 +19,7 @@ if (import.meta.env.DEV) {
   window.firebase = { firestore: db };
 }
 
+
 // Exports after everything is initialized
 export { db, auth, googleProvider };
 export const getAuthToken = async () => {
