@@ -1,167 +1,182 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
-import { RoleBasedComponent } from './RoleBasedComponent';
-import './Navigation.css';
-import { Navbar, Stack, Button, createStyles, Box } from '@mantine/core';
-import { IconHome, IconUsers, IconCalendar, IconSettings, IconChartBar, IconCoin, IconDatabase } from '@tabler/icons-react';
-
-// Arcadia.io colors
-const ARCADIA_COLORS = {
-  purple: '#6E2B81',
-  lightPurple: '#8A3A9B',
-  green: '#00B6AD',
-  lightGreen: '#45C1B9',
-  red: '#B82C5D',
-  darkRed: '#8A2147'
-};
+import { Navbar, Stack, Box, Text, Group, Divider } from '@mantine/core';
+import { 
+  IconHome, 
+  IconUsers, 
+  IconCalendar, 
+  IconSettings, 
+  IconChartBar, 
+  IconCoin, 
+  IconDatabase, 
+  IconHistory 
+} from '@tabler/icons-react';
+import { createStyles } from '@mantine/core';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const useStyles = createStyles((theme) => ({
-  button: {
-    position: 'relative',
-    border: 'none',
-    background: 'transparent',
-    color: theme.colorScheme === 'dark' ? theme.colors.gray[4] : theme.colors.gray[7],
-    '& .mantine-Button-leftIcon': {
-      color: theme.colorScheme === 'dark' ? theme.colors.gray[4] : theme.colors.gray[7]
+  navbar: {
+    backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
+    transition: 'width 200ms ease',
+    
+    [theme.fn.smallerThan('sm')]: {
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 'auto',
+      width: '100%',
+      zIndex: 100,
+      borderTop: `1px solid ${theme.colors.gray[2]}`,
     },
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      inset: 0,
-      borderRadius: theme.radius.sm,
-      padding: '2px',
-      background: `linear-gradient(135deg, ${ARCADIA_COLORS.purple} 0%, ${ARCADIA_COLORS.red} 100%)`,
-      WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-      WebkitMaskComposite: 'xor',
-      maskComposite: 'exclude',
-      opacity: 0.5,
-      transition: 'opacity 0.3s ease'
-    },
-    '&[data-active]': {
-      background: 'transparent',
-      color: ARCADIA_COLORS.purple,
-      '& .mantine-Button-leftIcon': {
-        color: ARCADIA_COLORS.purple
-      },
-      '&::before': {
-        opacity: 1
-      },
-      '&:hover': {
-        background: 'transparent',
-        '&::before': {
-          opacity: 0.8,
-          background: `linear-gradient(135deg, ${ARCADIA_COLORS.lightPurple} 0%, ${ARCADIA_COLORS.darkRed} 100%)`
-        }
-      }
-    },
-    '& .mantine-Button-inner': {
-      justifyContent: 'flex-start'
-    },
+  },
+
+  navItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    transition: 'all 200ms ease',
+    color: theme.colorScheme === 'dark' ? theme.colors.dark[0] : theme.colors.gray[7],
+    
     '&:hover': {
-      background: 'transparent',
-      '&::before': {
-        opacity: 0.8
+      backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
+    },
+
+    '&[data-active="true"]': {
+      backgroundColor: theme.fn.variant({ variant: 'light', color: 'blue' }).background,
+      color: theme.fn.variant({ variant: 'light', color: 'blue' }).color,
+      
+      '& .nav-icon': {
+        color: theme.fn.variant({ variant: 'light', color: 'blue' }).color,
       }
     },
-    transition: 'all 0.3s ease'
+
+    [theme.fn.smallerThan('sm')]: {
+      padding: theme.spacing.xs,
+      borderRadius: 0,
+      '&[data-active="true"]': {
+        borderRadius: 0,
+      }
+    },
+  },
+
+  navIcon: {
+    color: theme.colorScheme === 'dark' ? theme.colors.dark[2] : theme.colors.gray[6],
+    marginRight: theme.spacing.sm,
+    
+    [theme.fn.smallerThan('sm')]: {
+      marginRight: 0,
+    }
+  },
+
+  navLabel: {
+    [theme.fn.smallerThan('sm')]: {
+      fontSize: theme.fontSizes.xs,
+    }
+  },
+
+  mobileNav: {
+    [theme.fn.smallerThan('sm')]: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+    }
+  },
+
+  divider: {
+    margin: `${theme.spacing.md}px 0`,
+    [theme.fn.smallerThan('sm')]: {
+      display: 'none',
+    }
   }
 }));
 
-const ROLE_MENU_ITEMS = {
-  nurse: [
-    { to: '/patients', label: 'Patients', icon: 'users' },
-    { to: '/appointments', label: 'Appointments', icon: 'calendar' },
-    { to: '/tasks', label: 'Tasks', icon: 'checklist' }
-  ],
-  physician: [
-    { to: '/patients', label: 'Patients', icon: 'users' },
-    { to: '/appointments', label: 'Schedule', icon: 'calendar' },
-    { to: '/prescriptions', label: 'Prescriptions', icon: 'prescription' },
-    { to: '/lab-results', label: 'Lab Results', icon: 'lab' }
-  ],
-  practice_staff: [
-    { to: '/appointments', label: 'Scheduling', icon: 'calendar' },
-    { to: '/patients', label: 'Patient Records', icon: 'folder' },
-    { to: '/billing', label: 'Billing', icon: 'dollar' }
-  ],
-  analyst: [
-    { to: '/analytics', label: 'Analytics', icon: 'chart' },
-    { to: '/reports', label: 'Reports', icon: 'document' },
-    { to: '/exports', label: 'Data Exports', icon: 'download' }
-  ]
-};
-
 const Navigation = () => {
-  const { user } = useUser();
-  const location = useLocation();
   const { classes } = useStyles();
+  const location = useLocation();
 
-  const isActiveRoute = (path) => {
-    return location.pathname === path;
+  const navigationItems = [
+    { id: 'dashboard', icon: IconHome, label: 'Home', to: '/dashboard' },
+    { id: 'patients', icon: IconUsers, label: 'Patients', to: '/patients' },
+    { id: 'performance', icon: IconChartBar, label: 'Performance', to: '/performance' },
+    { id: 'ehr-alerts', icon: IconDatabase, label: 'EHR Alerts', to: '/ehr-alerts' },
+    { id: 'context', icon: IconHistory, label: 'Context History', to: '/patient-context' },
+  ];
+
+  const settingsItem = {
+    id: 'settings',
+    icon: IconSettings,
+    label: 'Settings',
+    to: '/settings'
   };
 
-  return (
-    <Navbar width={{ base: 250 }} p="md">
-      <Stack spacing="xs" align="stretch" justify="space-between" h="100%">
-        <Stack spacing="xs">
-          <Button
-            component={Link}
-            to="/dashboard"
-            variant={isActiveRoute('/dashboard') ? 'filled' : 'subtle'}
-            fullWidth
-            leftIcon={<IconHome size={20} />}
-            className={classes.button}
-            data-active={isActiveRoute('/dashboard')}
-          >
-            Home
-          </Button>
-          <Button
-            component={Link}
-            to="/patients"
-            variant={isActiveRoute('/patients') ? 'filled' : 'subtle'}
-            fullWidth
-            leftIcon={<IconUsers size={20} />}
-            className={classes.button}
-            data-active={isActiveRoute('/patients')}
-          >
-            Patients
-          </Button>
-          <Button
-            component={Link}
-            to="/performance"
-            variant={isActiveRoute('/performance') ? 'filled' : 'subtle'}
-            fullWidth
-            leftIcon={<IconChartBar size={20} />}
-            className={classes.button}
-            data-active={isActiveRoute('/performance')}
-          >
-            Performance
-          </Button>
-          <Button
-            component={Link}
-            to="/ehr-alerts"
-            variant={isActiveRoute('/ehr-alerts') ? 'filled' : 'subtle'}
-            fullWidth
-            leftIcon={<IconDatabase size={20} />}
-            className={classes.button}
-            data-active={isActiveRoute('/ehr-alerts')}
-          >
-            EHR Alerts
-          </Button>
-        </Stack>
+  const isActiveRoute = (path) => location.pathname === path;
 
-        <Button
-          component={Link}
-          to="/settings"
-          variant={isActiveRoute('/settings') ? 'filled' : 'subtle'}
-          fullWidth
-          leftIcon={<IconSettings size={20} />}
-          className={classes.button}
-          data-active={isActiveRoute('/settings')}
-        >
-          Settings
-        </Button>
+  const navItemVariants = {
+    initial: {
+      opacity: 0,
+      x: -20
+    },
+    animate: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        duration: 0.2
+      }
+    },
+    exit: {
+      opacity: 0,
+      x: 20,
+      transition: {
+        duration: 0.2
+      }
+    }
+  };
+
+  const NavItem = ({ icon: Icon, label, to, index, id }) => (
+    <motion.div
+      key={id}
+      variants={navItemVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{
+        delay: index * 0.1
+      }}
+    >
+      <Box
+        component={Link}
+        to={to}
+        className={classes.navItem}
+        data-active={isActiveRoute(to)}
+      >
+        <Group spacing="sm" noWrap>
+          <Icon size={20} className={classes.navIcon + ' nav-icon'} />
+          <Text className={classes.navLabel}>{label}</Text>
+        </Group>
+      </Box>
+    </motion.div>
+  );
+
+  return (
+    <Navbar p="md" className={classes.navbar} width={{ base: 250 }}>
+      <Stack spacing="xs" className={classes.mobileNav}>
+        <AnimatePresence mode="wait">
+          {navigationItems.map((item, index) => (
+            <NavItem 
+              key={item.id} 
+              {...item} 
+              index={index}
+            />
+          ))}
+          <Divider key="divider" className={classes.divider} />
+          <NavItem 
+            key={settingsItem.id} 
+            {...settingsItem} 
+            index={navigationItems.length}
+          />
+        </AnimatePresence>
       </Stack>
     </Navbar>
   );

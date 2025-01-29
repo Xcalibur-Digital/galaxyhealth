@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { IconUsers, IconCalendar, IconChartBar } from '@tabler/icons-react';
 import { useUser } from '../contexts/UserContext';
 import AIGuidance from '../components/dashboard/AIGuidance';
+import { usePatient } from '../contexts/PatientContext';
+import PatientAlert from '../components/patients/PatientAlert';
 
 const DashboardCard = ({ icon: Icon, title, value, link }) => (
   <Card shadow="sm" p="lg">
@@ -33,6 +35,7 @@ const DashboardCard = ({ icon: Icon, title, value, link }) => (
 );
 
 const Dashboard = () => {
+  const { activePatient } = usePatient();
   const { user } = useUser();
   const firstName = user?.displayName?.split(' ')[0] || 'there';
 
@@ -41,6 +44,10 @@ const Dashboard = () => {
       <Title order={1} mb="xl" align="center">
         Welcome, {firstName}!
       </Title>
+      
+      {activePatient && (
+        <PatientAlert patient={activePatient} mb="xl" />
+      )}
       
       <Grid>
         <Grid.Col span={12}>
