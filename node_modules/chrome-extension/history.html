@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notification History</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    .history-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .history-entry {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .history-entry:hover {
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .timestamp {
+      color: #666;
+      font-size: 0.9em;
+    }
+    .patient-info {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .stats {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .stats-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stats-card h4 {
+      margin-top: 0;
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 8px;
+    }
+    .hour-chart {
+      display: flex;
+      align-items: flex-end;
+      height: 100px;
+      gap: 2px;
+      margin-top: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .hour-bar {
+      flex: 1;
+      background: #6E2B81;
+      min-height: 1px;
+      transition: height 0.3s ease;
+    }
+    .hour-bar:hover {
+      background: #B82C5D;
+    }
+    .source-stat {
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .source-stat:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="history-container">
+    <h1>Notification History</h1>
+    <div id="stats" class="stats">Loading stats...</div>
+    <div id="history">Loading history...</div>
+  </div>
+  <script src="history.js"></script>
+</body>
+</html> 

@@ -1,0 +1,62 @@
+.patient-dashboard {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  padding: 1.5rem;
+  background: var(--mantine-color-body);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.stat-title {
+  font-size: 0.875rem;
+  color: var(--mantine-color-dimmed);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.recent-activity {
+  margin-top: 2rem;
+}
+
+.activity-item {
+  padding: 1rem;
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.chart-container {
+  min-height: 300px;
+  padding: 1rem;
+  background: var(--mantine-color-body);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--mantine-shadow-sm);
+} 

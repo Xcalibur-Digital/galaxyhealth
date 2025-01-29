@@ -1,0 +1,29 @@
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.resource-item {
+  padding: 1rem;
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-dark-6);
+  transition: background-color 0.2s ease;
+}
+
+.resource-item:hover {
+  background: var(--mantine-color-dark-5);
+}
+
+.resource-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.resource-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--mantine-color-dark-2);
+} 

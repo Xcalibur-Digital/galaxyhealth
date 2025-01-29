@@ -1,0 +1,23 @@
+.error-display {
+  padding: 1rem;
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-red-1);
+  color: var(--mantine-color-red-9);
+}
+
+.error-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.error-message {
+  font-size: 0.9rem;
+}
+
+.error-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+} 

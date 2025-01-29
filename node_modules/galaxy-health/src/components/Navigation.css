@@ -1,0 +1,104 @@
+.main-nav {
+  display: flex;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.nav-brand a {
+  color: #333;
+  text-decoration: none;
+}
+
+.nav-menu {
+  display: flex;
+  gap: 1.5rem;
+  margin-left: 3rem;
+  flex: 1;
+}
+
+.nav-item {
+  color: #666;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.nav-item.active {
+  color: #6200ee;
+  background: rgba(98, 0, 238, 0.1);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: #6200ee;
+  border-radius: 2px;
+}
+
+.nav-item:hover {
+  background: #f5f7fa;
+  color: #333;
+}
+
+.nav-item.active:hover {
+  background: rgba(98, 0, 238, 0.15);
+  color: #6200ee;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.role-badge {
+  background: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #495057;
+  text-transform: capitalize;
+}
+
+.on-call-status {
+  background: #e9ecef;
+  color: #495057;
+  font-weight: 500;
+}
+
+.on-call-status.active {
+  background: #6200ee;
+  color: white;
+}
+
+.on-call-status.active:hover {
+  background: #5000d6;
+  color: white;
+} 
