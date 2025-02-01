@@ -14,12 +14,11 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
-      external: ['react', 'react-dom', 'react-router-dom'],
       output: {
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          'react-router-dom': 'ReactRouterDOM'
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
         assetFileNames: 'assets/[name].[ext]',
         chunkFileNames: 'assets/[name].[hash].js',
@@ -40,14 +39,18 @@ export default defineConfig({
   logLevel: 'info',
   clearScreen: false,
   optimizeDeps: {
-    include: ['@mantine/core', '@mantine/hooks', '@emotion/react']
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@mantine/core',
+      '@mantine/hooks',
+      '@emotion/react'
+    ]
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@mantine/core': '@mantine/core/esm',
-      '@mantine/hooks': '@mantine/hooks/esm',
-      '@galaxy/shared': path.resolve(__dirname, '../shared'),
+      '@': path.resolve(__dirname, './src')
     }
   }
 }); 
