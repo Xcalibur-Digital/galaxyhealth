@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import postcss from 'postcss';
 
 export default defineConfig({
   plugins: [react()],
   root: '.',
   base: '/',
+  publicDir: 'public',
   server: {
     port: 3000,
     host: true
@@ -34,6 +36,16 @@ export default defineConfig({
       scss: {
         additionalData: `@import "@/styles/variables.scss";`
       }
+    },
+    postcss: {
+      plugins: [
+        postcss({
+          plugins: [
+            'postcss-preset-mantine',
+            'postcss-simple-vars',
+          ],
+        }),
+      ],
     }
   },
   logLevel: 'info',

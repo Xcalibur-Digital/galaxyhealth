@@ -1,289 +1,366 @@
-import { ModuleRegistry } from '@ag-grid-community/core';
-import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
-import { SetFilterModule } from '@ag-grid-enterprise/set-filter';
-import { MenuModule } from '@ag-grid-enterprise/menu';
-import { ColumnsToolPanelModule } from '@ag-grid-enterprise/column-tool-panel';
-import { SideBarModule } from '@ag-grid-enterprise/side-bar';
-
-// Register AG Grid Modules
-ModuleRegistry.registerModules([
-  ClientSideRowModelModule,
-  SetFilterModule,
-  MenuModule,
-  ColumnsToolPanelModule,
-  SideBarModule
-]);
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Group, Box, Text, Paper, Button, Menu, ActionIcon, Loader } from '@mantine/core';
-import { AgGridReact } from 'ag-grid-react';
-import { IconFilter, IconColumns, IconEye } from '@tabler/icons-react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { 
+  Container, 
+  Title, 
+  Paper, 
+  Group, 
+  Button, 
+  Menu, 
+  Text,
+  Stack,
+  Box,
+  TextInput,
+  ActionIcon,
+  Badge,
+  ScrollArea,
+  Table,
+  Center,
+  Loader,
+  Switch
+} from '@mantine/core';
+import { 
+  IconSearch, 
+  IconFilter,
+  IconAdjustments,
+  IconPlus,
+  IconChevronUp,
+  IconChevronDown,
+  IconSelector
+} from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
+import RiskLevelCell from './gridRenderers/RiskLevelCell';
 import { usePatient } from '../../contexts/PatientContext';
-import { saveGridState, loadGridState } from '../../utils/gridUtils';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
+import { gridViewService } from '../../services/gridViewService';
 import { SAVED_VIEWS, getFilterModelForView } from '../../utils/gridViews';
+import { motion } from 'framer-motion';
+import { DataTable } from 'mantine-datatable';
+import 'mantine-datatable/styles.css';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { searchFHIRPatients } from '../../utils/fhirService';
 
-// Add this CSS to your global styles or component
-const gridStyles = {
-  '.ag-theme-material': {
-    '--ag-font-family': 'var(--mantine-font-family)',
-    '--ag-font-size': '14px',
-    '--ag-header-height': '48px',
-    '--ag-header-background-color': 'var(--mantine-color-gray-0)',
-    '--ag-header-foreground-color': 'var(--mantine-color-dark-9)',
-    '--ag-header-column-separator-display': 'block',
-    '--ag-header-column-separator-color': 'var(--mantine-color-gray-3)',
-    '--ag-row-hover-color': 'var(--mantine-color-gray-0)',
-    '--ag-selected-row-background-color': 'var(--mantine-color-blue-0)',
-    '--ag-odd-row-background-color': 'transparent',
-    '--ag-row-border-color': 'var(--mantine-color-gray-2)',
-    '--ag-cell-horizontal-padding': '16px',
-    '--ag-borders': 'none',
-    'border': '1px solid var(--mantine-color-gray-3)',
-    'borderRadius': 'var(--mantine-radius-md)',
+const containerStyles = (theme) => ({
+  container: {
+    padding: theme.spacing.md,
+    '@media (max-width: theme.breakpoints.sm)': {
+      padding: theme.spacing.sm
+    }
   },
-  '.ag-theme-material .ag-header-cell': {
-    fontWeight: 600,
-  },
-  '.ag-theme-material .ag-header-cell-text': {
-    color: 'var(--mantine-color-dark-9)',
-  },
-  '.ag-theme-material .ag-cell': {
+  searchBar: {
     display: 'flex',
+    gap: '1rem',
     alignItems: 'center',
-  },
-  '.ag-theme-material .ag-row': {
-    borderBottom: '1px solid var(--mantine-color-gray-2)',
-    cursor: 'pointer',
-  },
-  '.ag-theme-material .ag-row-selected': {
-    backgroundColor: 'var(--mantine-color-blue-0)',
+    '@media (max-width: theme.breakpoints.sm)': {
+      flexDirection: 'column'
+    }
   }
-};
+});
 
-export default function PatientList() {
-  const { patients, loading: patientsLoading } = usePatient();
-  const gridRef = useRef(null);
-  const [rowData, setRowData] = useState([]);
+const PatientList = () => {
+  const { loading } = usePatient();
+  const { user } = useUser();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const viewId = searchParams.get('view');
-  const initialFilterApplied = useRef(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState({ field: null, direction: null });
+  const [currentView, setCurrentView] = useState(SAVED_VIEWS.HIGH_RISK);
+  const [savedViews, setSavedViews] = useState(
+    Object.values(SAVED_VIEWS).map(view => ({
+      id: view,
+      label: view.replace(/_/g, ' ').toLowerCase()
+        .replace(/\b\w/g, l => l.toUpperCase())
+    }))
+  );
+  const PAGE_SIZE = 15;
+  const [page, setPage] = useState(1);
+  const [useFHIR, setUseFHIR] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [error, setError] = useState(null);
+  const [isLoading, setLoading] = useState(false);
 
-  // Debug logs
-  console.log('PatientList render:', { patients, patientsLoading, rowData });
-
+  // Update records when patients change
   useEffect(() => {
-    if (patients?.length) {
-      console.log('Raw patients data:', patients);
-      const formattedData = patients.map(patient => ({
-        name: `${patient.firstName} ${patient.lastName}`,
-        age: patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : '',
+    if (!loading && patients) {
+      const mappedData = patients.map(patient => ({
+        id: patient.id,
+        name: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'N/A',
+        dateOfBirth: patient.dob || patient.dateOfBirth || patient.birthDate || 'N/A',
+        gender: patient.gender || 'N/A',
         riskLevel: patient.riskLevel || 'low',
-        lastVisit: patient.lastVisit || '',
-        careGaps: patient.careGaps?.length || 0,
-        provider: patient.provider || '',
-        id: patient.id
+        lastVisit: patient.lastVisit || 'N/A'
       }));
-      console.log('Formatted grid data:', formattedData);
-      setRowData(formattedData);
-    } else {
-      console.log('No patients data available:', patients);
+      setPatients(mappedData);
     }
-  }, [patients]);
+  }, [patients, loading]);
 
-  const [columnDefs] = useState([
-    { 
-      field: 'name', 
-      headerName: 'Patient Name',
-      filter: true,
-      checkboxSelection: true,
-      headerCheckboxSelection: true,
-      flex: 2,
-      minWidth: 200,
-      cellStyle: { fontWeight: 500 }
+  // Filter records based on search term
+  const filteredRecords = patients.filter(record => 
+    (record?.name?.toLowerCase()?.includes(searchTerm.toLowerCase()) || false) ||
+    (record?.riskLevel?.toLowerCase()?.includes(searchTerm.toLowerCase()) || false)
+  );
+
+  const columns = [
+    {
+      accessor: 'name',
+      title: 'Patient Name',
+      sortable: true,
+      width: '25%',
     },
-    { 
-      field: 'age', 
-      headerName: 'Age',
-      filter: 'agNumberColumnFilter',
-      width: 100,
-      type: 'numericColumn',
-      cellStyle: { justifyContent: 'center' }
+    {
+      accessor: 'dateOfBirth',
+      title: 'Date of Birth',
+      sortable: true,
+      render: ({ dateOfBirth }) => 
+        dateOfBirth === 'N/A' ? 'N/A' : new Date(dateOfBirth).toLocaleDateString()
     },
-    { 
-      field: 'riskLevel', 
-      headerName: 'Risk Level',
-      filter: true,
-      cellRenderer: RiskLevelRenderer,
-      width: 130,
-      cellStyle: { display: 'flex', alignItems: 'center' },
-      filterParams: {
-        values: ['low', 'medium', 'high']
+    {
+      accessor: 'gender',
+      title: 'Gender',
+      sortable: true,
+      width: '15%',
+    },
+    {
+      accessor: 'riskLevel',
+      title: 'Risk Level',
+      sortable: true,
+      width: '20%',
+      render: ({ riskLevel }) => <RiskLevelCell value={riskLevel} />
+    },
+    {
+      accessor: 'lastVisit',
+      title: 'Last Visit',
+      sortable: true,
+      render: ({ lastVisit }) => 
+        lastVisit === 'N/A' ? 'N/A' : new Date(lastVisit).toLocaleDateString()
+    }
+  ];
+
+  // Load view data
+  const loadView = useCallback(async (viewId) => {
+    try {
+      const defaultView = Object.values(SAVED_VIEWS).find(v => v === viewId);
+      let viewData;
+      
+      if (defaultView) {
+        viewData = getFilterModelForView(viewId);
+      } else {
+        const userViews = await gridViewService.getViews(user.uid);
+        viewData = userViews.find(v => v.id === viewId);
       }
-    },
-    { 
-      field: 'lastVisit', 
-      headerName: 'Last Visit',
-      filter: 'agDateColumnFilter',
-      width: 150,
-      valueFormatter: params => 
-        params.value ? new Date(params.value).toLocaleDateString() : ''
-    },
-    { 
-      field: 'careGaps', 
-      headerName: 'Care Gaps',
-      filter: 'agNumberColumnFilter',
-      width: 120,
-      type: 'numericColumn',
-      cellStyle: params => ({
-        color: params.value > 0 ? '#fa5252' : 'inherit',
-        fontWeight: params.value > 0 ? 500 : 400,
-        justifyContent: 'center'
-      })
-    },
-    { 
-      field: 'provider', 
-      headerName: 'Provider',
-      filter: true,
-      flex: 1,
-      minWidth: 150
-    }
-  ]);
 
-  const defaultColDef = useMemo(() => ({
-    sortable: true,
-    resizable: true,
-    filter: true,
-    floatingFilter: true,
-    suppressMovable: true,
-    suppressMenu: true
-  }), []);
-
-  const onGridReady = useCallback((params) => {
-    console.log('Grid ready:', params);
-    const savedState = loadGridState('patientsGrid');
-    if (savedState) {
-      gridRef.current.columnApi.applyColumnState({ state: savedState });
+      if (viewData && gridRef.current) {
+        gridRef.current.api.setFilterModel(viewData.filterModel);
+        gridRef.current.columnApi.applyColumnState({
+          state: viewData.columnState,
+          applyOrder: true
+        });
+        gridRef.current.api.setSortModel(viewData.sortModel);
+      }
+    } catch (error) {
+      console.error('Error loading view:', error);
     }
-    
-    // Apply initial filter if view parameter exists
-    if (viewId && !initialFilterApplied.current) {
-      const filterModel = getFilterModelForView(viewId);
-      params.api.setFilterModel(filterModel);
-      initialFilterApplied.current = true;
-    }
-    
-    params.api.sizeColumnsToFit();
-  }, [viewId]);
+  }, [user?.uid]);
 
-  const saveCurrentView = () => {
-    const columnState = gridRef.current.columnApi.getColumnState();
-    saveGridState('patientsGrid', columnState);
+  // Handle view changes
+  const handleViewChange = useCallback((viewId) => {
+    setCurrentView(viewId);
+    loadView(viewId);
+  }, [loadView]);
+
+  // Load saved views
+  useEffect(() => {
+    const loadSavedViews = async () => {
+      if (!user) return;
+      
+      try {
+        const userViews = await gridViewService.getViews(user.uid);
+        setSavedViews(prev => [
+          ...prev,
+          ...userViews.map(view => ({
+            id: view.id,
+            label: view.label || view.id
+          }))
+        ]);
+      } catch (error) {
+        console.error('Error loading saved views:', error);
+      }
+    };
+
+    loadSavedViews();
+  }, [user]);
+
+  const fetchFirestorePatients = async () => {
+    try {
+      setLoading(true);
+      const patientsRef = collection(db, 'patients');
+      const snapshot = await getDocs(patientsRef);
+      const patientData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPatients(patientData);
+    } catch (err) {
+      console.error('Error fetching patients:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const applyPresetFilter = useCallback((preset) => {
-    if (gridRef.current?.api) {
-      const filterModel = getFilterModelForView(preset);
-      gridRef.current.api.setFilterModel(filterModel);
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      if (useFHIR) {
+        const fhirPatients = await searchFHIRPatients();
+        setPatients(fhirPatients);
+      } else {
+        await fetchFirestorePatients();
+      }
+    } catch (err) {
+      console.error('Error fetching patients:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  };
 
-  const onRowClicked = useCallback((event) => {
-    navigate(`/patients/${event.data.id}`);
-  }, [navigate]);
-
-  if (patientsLoading) {
-    return (
-      <Paper p="md" radius="md" style={{ height: 'calc(100vh - 180px)' }}>
-        <Group position="center" style={{ height: '100%' }}>
-          <Loader size="xl" />
-        </Group>
-      </Paper>
-    );
-  }
+  useEffect(() => {
+    fetchPatients();
+  }, [useFHIR]);
 
   return (
-    <Paper p="xl" radius="md" style={{ height: 'calc(100vh - 180px)' }}>
-      <Group position="apart" mb="xl">
-        <Text size="xl" weight={700} color="dark.9">
-          Patient List ({rowData.length})
-        </Text>
-        <Group spacing="sm">
-          <Menu position="bottom-end" shadow="md">
-            <Menu.Target>
-              <Button 
-                variant="light" 
-                leftIcon={<IconFilter size={16} />}
-                size="sm"
-              >
-                Filters
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Preset Filters</Menu.Label>
-              <Menu.Item onClick={() => applyPresetFilter('highRisk')}>
-                High Risk Patients
-              </Menu.Item>
-              <Menu.Item onClick={() => applyPresetFilter('recentVisits')}>
-                Recent Visits
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-
-          <Button 
-            variant="light"
-            leftIcon={<IconColumns size={16} />}
-            onClick={() => gridRef.current.api.showToolPanel()}
-            size="sm"
-          >
-            Columns
-          </Button>
-          
-          <Button 
-            variant="subtle" 
-            onClick={saveCurrentView}
-            size="sm"
-          >
-            Save View
-          </Button>
-        </Group>
-      </Group>
-
-      <Box 
-        className="ag-theme-material" 
-        sx={{
-          height: 'calc(100% - 60px)',
-          width: '100%',
-          ...gridStyles
-        }}
+    <Container size="xl" py="xl">
+      <motion.div
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
       >
-        <AgGridReact
-          ref={gridRef}
-          rowData={rowData}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          rowSelection="multiple"
-          suppressRowClickSelection={false}
-          onGridReady={onGridReady}
-          onRowClicked={onRowClicked}
-          sideBar={{
-            toolPanels: ['columns'],
-            defaultToolPanel: ''
-          }}
-          domLayout='autoHeight'
-          enableBrowserTooltips={true}
-          rowHeight={48}
-          headerHeight={48}
-          pagination={true}
-          paginationPageSize={20}
-          animateRows={true}
-          suppressCellFocus={true}
-        />
-      </Box>
-    </Paper>
+        <Box pb="xl">
+          <motion.div variants={itemVariants}>
+            <Group position="apart" mb="lg">
+              <Stack spacing={4}>
+                <Title 
+                  order={1}
+                  sx={(theme) => ({
+                    color: theme.colorScheme === 'dark' ? 
+                      theme.white : theme.colors.dark[8]
+                  })}
+                >
+                  Patient Panel
+                </Title>
+                <Text color="dimmed">
+                  Manage and monitor your patient population
+                </Text>
+              </Stack>
+              <Group>
+                <TextInput
+                  placeholder="Search patients..."
+                  icon={<IconSearch size={16} />}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  sx={{ minWidth: 280 }}
+                />
+                <Menu>
+                  <Menu.Target>
+                    <Button 
+                      variant="light" 
+                      leftIcon={<IconPlus size={16} />}
+                    >
+                      Add Patient
+                    </Button>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item 
+                      onClick={() => navigate('/patients/new')}
+                    >
+                      Add Patient
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              </Group>
+            </Group>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Paper p="md" radius="md" withBorder>
+              <Group position="apart" mb="md">
+                <Title order={2}>Patients</Title>
+                <Group>
+                  <Switch
+                    label="Use FHIR Data"
+                    checked={useFHIR}
+                    onChange={(event) => setUseFHIR(event.currentTarget.checked)}
+                  />
+                  {!useFHIR && (
+                    <Button onClick={fetchPatients} color="blue">
+                      Refresh
+                    </Button>
+                  )}
+                </Group>
+              </Group>
+
+              <DataTable
+                striped
+                highlightOnHover
+                records={filteredRecords}
+                columns={[
+                  { 
+                    accessor: 'name',
+                    title: 'Name',
+                    render: (patient) => `${patient.firstName} ${patient.lastName}`
+                  },
+                  { accessor: 'dateOfBirth', title: 'Date of Birth' },
+                  { accessor: 'gender', title: 'Gender' },
+                  { 
+                    accessor: 'contact',
+                    title: 'Contact',
+                    render: (patient) => patient.phone || patient.email
+                  },
+                  { 
+                    accessor: 'lastVisit',
+                    title: 'Last Visit',
+                    render: (patient) => patient.lastVisit || 'N/A'
+                  }
+                ]}
+                totalRecords={patients.length}
+                recordsPerPage={PAGE_SIZE}
+                page={page}
+                onPageChange={setPage}
+                fetching={isLoading}
+                noRecordsText="No patients found"
+                loadingText="Loading patients..."
+                sx={(theme) => ({
+                  border: `1px solid ${
+                    theme.colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]
+                  }`,
+                  borderRadius: theme.radius.sm,
+                  '& th': {
+                    borderRight: `1px solid ${
+                      theme.colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]
+                    }`
+                  },
+                  '& td': {
+                    borderRight: `1px solid ${
+                      theme.colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]
+                    }`
+                  }
+                })}
+              />
+
+              {error && (
+                <Text color="red" mt="md" align="center">
+                  Error: {error}
+                </Text>
+              )}
+            </Paper>
+          </motion.div>
+        </Box>
+      </motion.div>
+    </Container>
   );
-}
+};
+
+export default PatientList;
 
 // Helper function to calculate age
 function calculateAge(dateOfBirth) {
@@ -343,4 +420,27 @@ const RiskLevelRenderer = ({ value }) => {
       {value}
     </Box>
   ) : null;
+};
+
+// Animation variants
+const containerVariants = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: "easeOut"
+    }
+  }
 }; 

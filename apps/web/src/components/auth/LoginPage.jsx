@@ -1,8 +1,10 @@
-import { Container, Paper, Title } from '@mantine/core';
+import React from 'react';
+import { Container, Paper, Title, Text, Button, Group, rem, Box } from '@mantine/core';
 import LoginForm from './LoginForm';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../../firebase';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
 
 const LoginPage = () => {
   const navigate = useNavigate();

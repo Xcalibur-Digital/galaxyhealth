@@ -14,7 +14,9 @@ import {
   Divider,
   Tabs,
   useMantineColorScheme,
-  Select
+  Select,
+  createTheme,
+  rem
 } from '@mantine/core';
 import { 
   IconCheck, 
@@ -29,6 +31,23 @@ import { useUser } from '../../contexts/UserContext';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { showNotification } from '@mantine/notifications';
+
+const useStyles = createTheme((theme) => ({
+  container: {
+    maxWidth: rem(800),
+    margin: '0 auto',
+    padding: theme.spacing.xl,
+    '@media (max-width: theme.breakpoints.sm)': {
+      padding: theme.spacing.md
+    }
+  },
+  section: {
+    marginBottom: rem(32),
+    '@media (max-width: theme.breakpoints.sm)': {
+      marginBottom: rem(24)
+    }
+  }
+}));
 
 const Settings = () => {
   const { user } = useUser();

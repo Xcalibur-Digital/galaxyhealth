@@ -1,5 +1,22 @@
 import React from 'react';
-import { Card, Text, Group, Badge } from '@mantine/core';
+import { Card, Text, Group, Badge, createTheme, rem } from '@mantine/core';
+
+const useStyles = createTheme((theme) => ({
+  card: {
+    height: '100%',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    '&:hover': {
+      transform: `translateY(${rem(-2)})`,
+      boxShadow: theme.shadows.md
+    }
+  },
+  details: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: rem(8),
+    marginTop: rem(8)
+  }
+}));
 
 const PatientCard = ({ patient }) => {
   const getName = () => {
@@ -14,7 +31,7 @@ const PatientCard = ({ patient }) => {
   };
 
   return (
-    <Card shadow="sm" p="lg" radius="md" withBorder className="patient-card">
+    <Card shadow="sm" p="lg" radius="md" withBorder className="patient-card" style={useStyles.card}>
       <div className="patient-info">
         <Group position="apart">
           <Text className="patient-name">{getName()}</Text>

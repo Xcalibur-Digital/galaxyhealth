@@ -18,7 +18,9 @@ import {
   Progress,
   ActionIcon,
   Tooltip,
-  Alert
+  Alert,
+  Timeline,
+  rem
 } from '@mantine/core';
 import { 
   IconBrain, 

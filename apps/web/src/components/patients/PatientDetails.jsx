@@ -9,7 +9,9 @@ import {
   Group, 
   Stack,
   Loader,
-  Center
+  Center,
+  createTheme,
+  rem
 } from '@mantine/core';
 import { 
   IconHeartbeat, 

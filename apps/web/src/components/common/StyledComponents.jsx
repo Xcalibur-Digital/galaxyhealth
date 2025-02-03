@@ -1,6 +1,4 @@
-import { createStyles } from '@mantine/core';
-
-export const useStyles = createStyles((theme) => ({
+export const componentStyles = (theme) => ({
   card: {
     backgroundColor: theme.colors.dark[7],
     borderRadius: theme.radius.lg,
@@ -45,4 +43,4 @@ export const useStyles = createStyles((theme) => ({
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: theme.spacing.md,
   },
-})); 
+}); 

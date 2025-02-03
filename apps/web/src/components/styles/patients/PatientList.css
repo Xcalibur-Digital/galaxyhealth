@@ -32,4 +32,29 @@
 
 .patient-card:hover {
   transform: translateY(-2px);
-} 
+}
+
+/* New styles for table layout */
+table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+table th, table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Set specific widths for each column:
+   1: Name - 30%
+   2: Date of Birth - 20%
+   3: Gender - 10%
+   4: Contact - 20%
+   5: Last Visit - 20%
+*/
+table th:nth-child(1) { width: 30%; }
+table th:nth-child(2) { width: 20%; }
+table th:nth-child(3) { width: 10%; }
+table th:nth-child(4) { width: 20%; }
+table th:nth-child(5) { width: 20%; } 

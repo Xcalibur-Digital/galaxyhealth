@@ -9,15 +9,36 @@ import {
   Button,
   Divider,
   ThemeIcon,
-  Box
+  Box,
+  Timeline,
+  Card,
+  Badge,
+  ActionIcon,
+  Tooltip
 } from '@mantine/core';
 import { 
   IconRobot, 
   IconArrowRight, 
   IconStethoscope,
   IconAlertCircle,
-  IconChecks
+  IconChecks,
+  IconTrendingUp,
+  IconCalendarEvent,
+  IconPill,
+  IconHeartbeat,
+  IconRefresh
 } from '@tabler/icons-react';
+import { Link } from 'react-router-dom';
+import { keyframes } from '@emotion/react';
+import useRecommendationsStore from '../../stores/recommendationsStore';
+import { motion } from 'framer-motion';
+
+// Define pulsing animation for the robot icon
+const pulse = keyframes`
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+`;
 
 const NarrativeSummary = () => {
   // This would come from your AI service in production
@@ -26,19 +47,19 @@ const NarrativeSummary = () => {
     keyPoints: [
       {
         type: 'alert',
-        text: '3 high-risk diabetes patients need medication review',
+        text: '1 high-risk diabetes patient needs medication review',
         icon: IconAlertCircle,
         color: 'red'
       },
       {
         type: 'opportunity',
-        text: '8 Annual Wellness Visits can be scheduled this week',
+        text: '3 Annual Wellness Visits can be scheduled this week',
         icon: IconStethoscope,
         color: 'blue'
       },
       {
         type: 'success',
-        text: '4 patients improved their blood pressure control this month',
+        text: '2 patients improved their blood pressure control this month',
         icon: IconChecks,
         color: 'green'
       }
@@ -46,7 +67,7 @@ const NarrativeSummary = () => {
     recommendation: {
       priority: 'high',
       action: 'Focus on High-Risk Diabetes Patients',
-      impact: 'Early intervention could prevent complications for 3 patients with HbA1c > 9.0',
+      impact: 'Early intervention could prevent complications for 1 patient with HbA1c > 9.0',
       nextSteps: [
         'Review medication adherence reports',
         'Schedule follow-up appointments',
@@ -55,86 +76,162 @@ const NarrativeSummary = () => {
     }
   };
 
+  const cardVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut"
+      }
+    }
+  };
+
   return (
-    <Paper p="xl" radius="md" withBorder mt="xl">
+    <motion.div
+      variants={cardVariants}
+      initial="initial"
+      animate="animate"
+    >
+    <Card shadow="sm" radius="lg" p="xl" mt="xl">
       <Group position="apart" mb="lg">
         <Group>
           <Avatar 
             size="lg" 
             radius="xl"
             sx={(theme) => ({
-              background: theme.fn.linearGradient(45, '#6E2B81', '#B82C5D'),
+              background: theme.fn.linearGradient(45, 
+                theme.colors.indigo[7], 
+                theme.colors.indigo[9]
+              ),
+              border: `2px solid ${theme.colors.indigo[5]}`,
+              boxShadow: theme.shadows.md
             })}
           >
-            <IconRobot size={24} />
+            <IconRobot 
+              size={24} 
+              style={{ animation: `${pulse} 2s infinite` }} 
+            />
           </Avatar>
-          <div>
-            <Title order={3}>AI Summary</Title>
-            <Text size="sm" color="dimmed">Updated just now</Text>
-          </div>
+          <Stack spacing={0}>
+            <Title order={3}>AI Recommendations</Title>
+            <Group spacing="xs">
+              <Text size="sm" color="dimmed">Updated just now</Text>
+              <Tooltip label="Refresh recommendations">
+                <ActionIcon 
+                  variant="subtle" 
+                  size="sm"
+                  onClick={() => {/* Refresh logic */}}
+                >
+                  <IconRefresh size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+          </Stack>
         </Group>
       </Group>
 
       <Box 
         sx={(theme) => ({
           padding: theme.spacing.md,
-          backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.colors.gray[0],
+          backgroundColor: theme.colorScheme === 'dark' ? 
+            theme.colors.dark[7] : theme.colors.gray[0],
           borderRadius: theme.radius.md,
-          marginBottom: theme.spacing.lg
+          marginBottom: theme.spacing.lg,
+          border: `1px solid ${
+            theme.colorScheme === 'dark' ? 
+              theme.colors.dark[6] : theme.colors.gray[2]
+          }`
         })}
       >
         <Text size="md">{summary.overview}</Text>
       </Box>
 
-      <Stack spacing="md" mb="xl">
+      <Timeline active={1} bulletSize={24} lineWidth={2} mb="xl">
         {summary.keyPoints.map((point, index) => (
-          <Group key={index} spacing="sm">
-            <ThemeIcon color={point.color} size="lg" radius="xl">
-              <point.icon size={18} />
-            </ThemeIcon>
-            <Text size="sm">{point.text}</Text>
-          </Group>
+          <Timeline.Item
+            key={index}
+            bullet={
+              <ThemeIcon
+                size={24}
+                radius="xl"
+                color={point.color}
+                variant="light"
+              >
+                <point.icon size={12} stroke={1.5} />
+              </ThemeIcon>
+            }
+            title={
+              <Group spacing="xs">
+                <Text size="sm" weight={500}>{point.text}</Text>
+                <Badge 
+                  size="sm" 
+                  color={point.color}
+                  variant="dot"
+                >
+                  {point.type}
+                </Badge>
+              </Group>
+            }
+          />
         ))}
-      </Stack>
+      </Timeline>
 
       <Divider my="lg" />
 
       <Stack spacing="md">
         <Title order={4}>Recommended Action</Title>
-        <Box 
+        <Card 
+          p="md" 
+          radius="md"
           sx={(theme) => ({
-            padding: theme.spacing.md,
-            backgroundColor: theme.colors.blue[7],
-            color: 'white',
-            borderRadius: theme.radius.md
+            backgroundColor: theme.colors.indigo[7],
+            color: theme.white
           })}
         >
-          <Text weight={500}>{summary.recommendation.action}</Text>
-          <Text size="sm" mt={4} style={{ opacity: 0.9 }}>
-            {summary.recommendation.impact}
-          </Text>
-        </Box>
-
-        <Stack spacing="xs">
-          {summary.recommendation.nextSteps.map((step, index) => (
-            <Group key={index} spacing="xs">
-              <Text size="sm" color="dimmed">{index + 1}.</Text>
-              <Text size="sm">{step}</Text>
+          <Stack spacing="xs">
+            <Group position="apart">
+              <Text weight={500}>{summary.recommendation.action}</Text>
+              <Badge color="red">High Priority</Badge>
             </Group>
-          ))}
-        </Stack>
+            <Text size="sm" style={{ opacity: 0.9 }}>
+              {summary.recommendation.impact}
+            </Text>
+          </Stack>
+        </Card>
+
+        <Box 
+          sx={(theme) => ({
+            backgroundColor: theme.colorScheme === 'dark' ? 
+              theme.colors.dark[7] : theme.colors.gray[0],
+            borderRadius: theme.radius.md,
+            padding: theme.spacing.md
+          })}
+        >
+          <Stack spacing="xs">
+            {summary.recommendation.nextSteps.map((step, index) => (
+              <Group key={index} spacing="xs">
+                <Text size="sm" color="dimmed">{index + 1}.</Text>
+                <Text size="sm">{step}</Text>
+              </Group>
+            ))}
+          </Stack>
+        </Box>
 
         <Group position="right" mt="md">
           <Button 
             variant="light"
-            rightIcon={<IconArrowRight size={16} />}
+            rightSection={<IconArrowRight size={16} stroke={1.5} />}
             onClick={() => {/* Navigate to relevant view */}}
+            color="indigo"
           >
             Take Action
           </Button>
         </Group>
       </Stack>
-    </Paper>
+    </Card>
+    </motion.div>
   );
 };
 

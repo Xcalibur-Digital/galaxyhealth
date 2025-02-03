@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { 
   signInWithPopup, 
   GoogleAuthProvider,
@@ -73,16 +72,25 @@ export const authService = {
   // Backend Integration
   async registerWithBackend(user, token) {
     try {
-      await axios.post(`${API_URL}/auth/register`, {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL
-      }, {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        })
       });
+      
+      if (!response.ok) {
+        throw new Error('Backend registration failed');
+      }
+      
+      return await response.json();
     } catch (error) {
       console.error('Backend registration error:', error);
       throw error;
